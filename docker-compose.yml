@@ -1,0 +1,90 @@
+services:
+  mysql:
+    container_name: mysql
+    image: mysql
+    environment:
+#      MYSQL_ALLOW_EMPTY_PASSWORD: true
+      MYSQL_ROOT_PASSWORD: G2ak-JxG
+    volumes:
+      - mysql:/data/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "3307:3306"
+    networks:
+      - mysql
+    restart: unless-stopped
+
+#  mysql_master:
+#    image: mysql:8.0
+#    container_name: "mysql_master"
+#    ports:
+#      - 3307:3306
+#    environment:
+#      #      MYSQL_ALLOW_EMPTY_PASSWORD: true
+#      MYSQL_ROOT_PASSWORD: G2ak-JxG
+#    volumes:
+#      - mysql:/data/mysql
+#    networks:
+#      - mysql
+#    restart: unless-stopped
+#
+#  mysql_slave:
+#    image: mysql:8.0
+#    container_name: "mysql_slave"
+#    environment:
+#      #      MYSQL_ALLOW_EMPTY_PASSWORD: true
+#      MYSQL_ROOT_PASSWORD: G2ak-JxG
+#    ports:
+#      - 3308:3306
+#    depends_on:
+#      - mysql_master
+#    volumes:
+#      - mysql:/data/mysql
+#    networks:
+#      - mysql
+#    restart: unless-stopped
+#  mysql_master:
+#    image: mysql:8.0
+#    env_file:
+#      - ./mysql/master/mysql_master.env
+#    container_name: "mysql_master"
+#    ports:
+#      - 3307:3306
+#    volumes:
+#      - ./mysql/master/conf/mysql.conf.cnf:/etc/mysql/conf.d/mysql.conf.cnf
+##      - ./mysql/master/data:/var/lib/mysql
+#      - mysql:/var/lib/mysql
+#    networks:
+#      - mysql
+#    restart: unless-stopped
+#
+#  mysql_slave:
+#    image: mysql:8.0
+#    env_file:
+#      - ./mysql/slave/mysql_slave.env
+#    container_name: "mysql_slave"
+#    ports:
+#      - 3308:3306
+#    depends_on:
+#      - mysql_master
+#    volumes:
+#      - ./mysql/slave/conf/mysql.conf.cnf:/etc/mysql/conf.d/mysql.conf.cnf
+##      - ./mysql/slave/data:/var/lib/mysql
+#      - mysql:/var/lib/mysql
+#    networks:
+#      - mysql
+#    restart: unless-stopped
+
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+
+networks:
+  mysql:
+    driver: bridge
+
+volumes:
+  mysql:
+  pgadmin:

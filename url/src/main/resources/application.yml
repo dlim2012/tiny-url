@@ -2,7 +2,7 @@ server:
   port: 8080
 spring:
   application:
-    name: accomodation
+    name: url
   datasource:
     driverClassName: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3307/tiny_url
@@ -10,7 +10,17 @@ spring:
     password: G2ak-JxG
   jpa:
     hibernate:
-        ddl-auto: create-drop
+      ddl-auto: create-drop
 #      ddl-auto: update
     generate-ddl: true
     show-sql: true
+  zipkin:
+    base-url: http://localhost:9411
+
+eureka:
+  client:
+    server-url:
+      defaultZone: http://localhost:8761/eureka
+    fetch-registry: true # default: true
+    register-with-eureka: true # default: true
+    enabled: true # default: true

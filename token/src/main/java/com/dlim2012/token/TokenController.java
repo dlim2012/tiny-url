@@ -1,5 +1,6 @@
 package com.dlim2012.token;
 
+import com.dlim2012.clients.token.config.TokenConfiguration;
 import com.dlim2012.clients.token.dto.TokenItem;
 import com.dlim2012.clients.token.dto.TokenSetting;
 import lombok.AllArgsConstructor;
@@ -23,10 +24,10 @@ public class TokenController {
         return tokenItem;
     }
 
-    @GetMapping("settings")
-    public TokenSetting getTokenSetting(){
-        TokenSetting tokenSetting = tokenService.getTokenSetting();
-        log.info("Get token setting: " + tokenSetting.toString());
-        return tokenSetting;
-    }
+//    @GetMapping("settings")
+//    public TokenConfiguration getTokenSetting(){
+//        TokenSetting tokenSetting = tokenService.getTokenSetting();
+//        log.info("Get token setting: " + tokenSetting.toString());
+//        return tokenSetting;
+//    }
 }

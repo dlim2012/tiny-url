@@ -28,35 +28,37 @@ public class URLService {
         return urlRepository.findAll();
     }
 
-    public ShortURLItem shortURL(LongURLItem shortURLRequest) {
+    public String shortURLPath(String longURL) {
 
-        Optional<URL> urlOptional = urlRepository.findByLongURL(shortURLRequest.longURL());
-        String shortURL;
+        Optional<URL> urlOptional = urlRepository.findByLongURL(longURL);
+        String path;
 
 
 
         if (urlOptional.isEmpty()) {
-            shortURL = urlGenerator.generateShortURL();
-//            shortURL = "aaaaaaa";
+            path = urlGenerator.generateShortURL();
+//            shortURLPath = "aaaaaaa";
             URL url = URL.builder()
-                    .longURL(shortURLRequest.longURL())
-                    .shortURLPath(shortURL)
+                    .longURL(longURL)
+                    .shortURLPath(path)
                     .build();
             urlRepository.save(url);
         } else {
-            shortURL = urlOptional.get().getShortURLPath();
+            path = urlOptional.get().getShortURLPath();
         }
 
-        return new ShortURLItem(shortURL);
+        // todo: add default url
+
+        return path;
     }
 
-    public LongURLItem longURL(ShortURLItem longURLRequest){
-        URL urlOptional = urlRepository.findByShortURL(longURLRequest.shortURL()).orElseThrow(
+    public String longURL(String shortPath){
+        URL urlOptional = urlRepository.findByShortURL(shortPath).orElseThrow(
                 () -> new IllegalStateException(
-                        "short url \"" + longURLRequest.shortURL() + "\" does not exist."
+                        "short path \"" + shortPath + "\" does not exist."
                 )
         );
-        return new LongURLItem(urlOptional.getLongURL());
+        return urlOptional.getLongURL();
     }
 
 }

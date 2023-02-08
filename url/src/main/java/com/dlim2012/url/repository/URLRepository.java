@@ -18,8 +18,8 @@ public interface URLRepository extends JpaRepository<URL, Long> {
 
 
     @Query(
-            value = "Select * from url u WHERE u.short_url = ?1",
+            value = "Select * from url u WHERE u.short_url_path = ?1",
             nativeQuery = true
     )
-    Optional<URL> findByShortURL(String shortURL);
+    Optional<URL> findByShortURL(String shortURLPath);
 }
