@@ -14,6 +14,87 @@ services:
       - mysql
     restart: unless-stopped
 
+  cassandra_shorturl:
+    container_name: cassandra_shorturl
+    image: cassandra:4.0
+    ports:
+      - 9043:9042
+    volumes:
+      - cassandra_shorturl:/data/cassandra_shorturl
+    networks:
+      - cassandra_short
+
+  cassandra_longurl:
+    container_name: cassandra_longurl
+    image: cassandra:4.0
+    ports:
+      - 9044:9042
+    volumes:
+      - cassandra_longurl:/data/cassandra_longurl
+    networks:
+      - cassandra_long
+
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - spring
+
+  eureka-server:
+    image: dlim2012/eureka-server:latest
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    networks:
+      - spring
+    depends_on:
+      - zipkin
+  apigw:
+    image: dlim2012/apigw:latest
+    container_name: apigw
+    ports:
+      - "8000:8000"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    networks:
+      - spring
+    depends_on:
+      - zipkin
+      - eureka-server
+#  token:
+#    image: dlim2012/token:latest
+#    container_name: token
+#    ports:
+#      - "8081:8081"
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker
+#    networks:
+#      - mysql
+#      - spring
+#    depends_on:
+#      - zipkin
+#      - eureka-server
+#      - mysql
+#  url:
+#    image: dlim2012/url:latest
+#    container_name: url
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker
+#    networks:
+#      - spring
+#      - mysql
+#    depends_on:
+#      - zipkin
+#      - eureka-server
+#      - mysql
+#      - token
+
 #  mysql_master:
 #    image: mysql:8.0
 #    container_name: "mysql_master"
@@ -75,16 +156,17 @@ services:
 #      - mysql
 #    restart: unless-stopped
 
-  zipkin:
-    image: openzipkin/zipkin
-    container_name: zipkin
-    ports:
-      - "9411:9411"
-
 networks:
+  cassandra_short:
+    driver: bridge
+  cassandra_long:
+    driver: bridge
   mysql:
+    driver: bridge
+  spring:
     driver: bridge
 
 volumes:
   mysql:
-  pgadmin:
+  cassandra_shorturl:
+  cassandra_longurl:

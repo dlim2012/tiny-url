@@ -13,10 +13,10 @@ spring:
           uri: lb://URL
           predicates:
             - Path=/**
-        - id: appuser
-          uri: lb://APPUSER
-          predicates:
-            - Path=/api/v1/**
+#        - id: appuser
+#          uri: lb://APPUSER
+#          predicates:
+#            - Path=/api/v1/**
 
 eureka:
   client:

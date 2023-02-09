@@ -8,8 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.GetMapping;
 
-
-import javax.transaction.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -37,15 +35,12 @@ public class TokenService {
     @Autowired
     public TokenService(TokenRepository tokenRepository){
         this.tokenRepository = tokenRepository;
-        Optional<Integer> seedOptional = tokenRepository.getLastSeed();
-        seed = seedOptional.orElse(0);
-
+        seed = tokenRepository.getLastSeed().orElse(0);
         // todo: periodically delete expired tokens (once every day) with low priority
     }
 
 
     @GetMapping
-    @Transactional
     public TokenItem getToken() {
         lock.lock();
 
