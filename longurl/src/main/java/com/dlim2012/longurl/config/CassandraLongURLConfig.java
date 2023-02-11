@@ -1,34 +1,37 @@
 package com.dlim2012.longurl.config;
 
-import com.datastax.oss.driver.api.core.CqlSession;
-import com.dlim2012.longurl.repository.ShortPathToLongRepository;
-import org.springframework.context.annotation.Bean;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
-import org.springframework.data.cassandra.SessionFactory;
 import org.springframework.data.cassandra.config.AbstractCassandraConfiguration;
-import org.springframework.data.cassandra.config.CqlSessionFactoryBean;
 import org.springframework.data.cassandra.config.SchemaAction;
-import org.springframework.data.cassandra.config.SessionFactoryFactoryBean;
-import org.springframework.data.cassandra.core.CassandraOperations;
-import org.springframework.data.cassandra.core.CassandraTemplate;
-import org.springframework.data.cassandra.core.convert.CassandraConverter;
-import org.springframework.data.cassandra.core.convert.MappingCassandraConverter;
 import org.springframework.data.cassandra.core.cql.keyspace.CreateKeyspaceSpecification;
 import org.springframework.data.cassandra.core.cql.keyspace.DropKeyspaceSpecification;
-import org.springframework.data.cassandra.core.mapping.CassandraMappingContext;
-import org.springframework.data.cassandra.core.mapping.SimpleUserTypeResolver;
-import org.springframework.data.cassandra.repository.config.EnableCassandraRepositories;
 
 import java.util.Arrays;
 import java.util.List;
 
 @Configuration
-@EnableCassandraRepositories(
-    basePackages = { "com.dlim2012.longurl" }
-)
-public class CassandraLongURLConfig extends AbstractCassandraConfiguration {
-    public static final String KEYSPACE = "tiny_url";
+@Slf4j
+public class CassandraLongUrlConfig extends AbstractCassandraConfiguration {
+
+    public String keyspace;
+    public String contactPoints;
+    public int port;
+
+    CassandraLongUrlConfig(
+            @Value("${spring.cassandra_longurl.contactPoints}") String contactPoints,
+            @Value("${spring.cassandra_longurl.port}") int port,
+            @Value("${spring.cassandra_longurl.keyspace}") String keyspace
+    ){
+        this.contactPoints = contactPoints;
+        this.port = port;
+        this.keyspace = keyspace;
+        log.info(contactPoints);
+        log.info(String.valueOf(port));
+        log.info(keyspace);
+    }
+
 
     @Override
     public SchemaAction getSchemaAction() {
@@ -38,7 +41,7 @@ public class CassandraLongURLConfig extends AbstractCassandraConfiguration {
     @Override
     protected List<CreateKeyspaceSpecification> getKeyspaceCreations() {
 
-        CreateKeyspaceSpecification specification = CreateKeyspaceSpecification.createKeyspace(KEYSPACE)
+        CreateKeyspaceSpecification specification = CreateKeyspaceSpecification.createKeyspace(keyspace)
                 .ifNotExists(true);
         return Arrays.asList(specification);
     }
@@ -50,17 +53,17 @@ public class CassandraLongURLConfig extends AbstractCassandraConfiguration {
 
     @Override
     public String getContactPoints() {
-        return "localhost";
+        return contactPoints;
     }
 
     @Override
     public int getPort() {
-        return 9044;
+        return port;
     }
 
     @Override
     protected String getKeyspaceName() {
-        return KEYSPACE;
+        return keyspace;
     }
 
     @Override

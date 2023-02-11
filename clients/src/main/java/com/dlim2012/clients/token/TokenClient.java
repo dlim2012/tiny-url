@@ -7,8 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @FeignClient(
         name = "token",
-//        url = "${clients.token.url}"
-    url = "http://localhost:8081"
+        url = "${clients.token.url}"
 )
 public interface TokenClient {
     @GetMapping("api/v1/token")

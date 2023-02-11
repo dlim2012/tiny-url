@@ -20,22 +20,16 @@ public class TokenService {
 
     private final TokenRepository tokenRepository;
     private final TokenConfiguration tokenConfiguration = new TokenConfiguration();
+    final Random random = new Random();
 
     private final Lock lock = new ReentrantLock();
-
-//    private final int TOKEN_LENGTH = 7;
-//    private final String CHARACTER_MAP = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-//    private final long MAX = (long) Math.pow(62, 7);
-//    private final int INCREMENT = 1_000_000_000;
-//    private final int INTERVAL = 178_937_281;
-//    private final Period PERIOD = Period.ofYears(1);
-
     private int seed;
 
     @Autowired
     public TokenService(TokenRepository tokenRepository){
         this.tokenRepository = tokenRepository;
         seed = tokenRepository.getLastSeed().orElse(0);
+        System.out.println(seed);
         // todo: periodically delete expired tokens (once every day) with low priority
     }
 
@@ -43,7 +37,6 @@ public class TokenService {
     @GetMapping
     public TokenItem getToken() {
         lock.lock();
-
         Optional<com.dlim2012.token.entity.Token> tokenOptional;
         do {
             seed = (seed + tokenConfiguration.getInterval()) % tokenConfiguration.getIncrement();
@@ -51,18 +44,16 @@ public class TokenService {
 
         } while (tokenOptional.isPresent() && tokenOptional.get().getExpireDate().isAfter(LocalDate.now()));
         int currentSeed = seed;
-        LocalDateTime now = LocalDateTime.now();
-        tokenRepository.save(new Token(seed, now, now.toLocalDate().plusDays(366)));
         lock.unlock();
 
-        final Random random = new Random();
-        LocalDateTime tokenExpireTime = now.plusSeconds(60*60*23 + random.nextInt(60*60));
+        LocalDateTime now = LocalDateTime.now();
+        System.out.println(seed);
+        System.out.println(currentSeed);
+        tokenRepository.save(
+                new Token(currentSeed, now, now.toLocalDate().plusYears(1).plusDays(1)))
+        ;
 
-        return new TokenItem(currentSeed, tokenExpireTime);
+        return new TokenItem(currentSeed, now.plusSeconds(60*60*23 + random.nextInt(60*60)));
     }
 
-//    public TokenConfiguration getTokenSetting() {
-//        return tokenConfiguration;
-//    }
-//    }
 }

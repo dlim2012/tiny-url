@@ -1,5 +1,5 @@
 server:
-  port: 8000
+  port: 8080
 
 spring:
   application:
@@ -9,14 +9,14 @@ spring:
   cloud:
     gateway:
       routes:
-        - id: url
-          uri: lb://URL
+        - id: ShortURL
+          uri: lb://SHORTURL
+          predicates:
+            - Path=/api/v1/short/**
+        - id: LongURL
+          uri: lb://LONGURL
           predicates:
             - Path=/**
-#        - id: appuser
-#          uri: lb://APPUSER
-#          predicates:
-#            - Path=/api/v1/**
 
 eureka:
   client:

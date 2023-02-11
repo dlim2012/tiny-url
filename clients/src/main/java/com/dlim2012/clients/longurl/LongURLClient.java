@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @FeignClient(
         name = "longurl",
-        url = "http://localhost:8082"
+        url = "${clients.longurl.url}"
 )
 public interface LongURLClient {
 

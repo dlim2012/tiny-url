@@ -1,32 +1,19 @@
 server:
-  port: 8080
+  port: 8083
 spring:
-#  main:
-#    allow-bean-definition-overriding: true
   application:
     name: shorturl
 
   cassandra_shorturl:
     contactPoints: localhost
     port: 9043
+    keyspace: tiny_url
     schemaAction: CREATE_IF_NOT_EXISTS
     request:
       timeout: 10s
     connection:
       connect-timeout: 10s
       init-query-timeout: 10s
-
-  #  datasource:
-  #    driverClassName: com.mysql.cj.jdbc.Driver
-  #    url: jdbc:mysql://localhost:3307/tiny_url
-  #    username: root
-  #    password: G2ak-JxG
-  #  jpa:
-  #    hibernate:
-  #      ddl-auto: create-drop
-  ##      ddl-auto: update
-  #    generate-ddl: true
-  #    show-sql: true
   zipkin:
     base-url: http://localhost:9411
 
@@ -34,6 +21,6 @@ eureka:
   client:
     server-url:
       defaultZone: http://localhost:8761/eureka
-    fetch-registry: true # default: true
-    register-with-eureka: true # default: true
-    enabled: true # default: true
+    enabled: true
+
+domain: "http://example.com"

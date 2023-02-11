@@ -1,19 +1,15 @@
 services:
   mysql:
     container_name: mysql
-    image: mysql
+    image: mysql:8.0
     environment:
-#      MYSQL_ALLOW_EMPTY_PASSWORD: true
-      MYSQL_ROOT_PASSWORD: G2ak-JxG
+      MYSQL_ROOT_PASSWORD: password
     volumes:
       - mysql:/data/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "3307:3306"
-    networks:
-      - mysql
     restart: unless-stopped
-
   cassandra_shorturl:
     container_name: cassandra_shorturl
     image: cassandra:4.0
@@ -21,9 +17,6 @@ services:
       - 9043:9042
     volumes:
       - cassandra_shorturl:/data/cassandra_shorturl
-    networks:
-      - cassandra_short
-
   cassandra_longurl:
     container_name: cassandra_longurl
     image: cassandra:4.0
@@ -31,9 +24,6 @@ services:
       - 9044:9042
     volumes:
       - cassandra_longurl:/data/cassandra_longurl
-    networks:
-      - cassandra_long
-
   zipkin:
     image: openzipkin/zipkin
     container_name: zipkin
@@ -41,9 +31,8 @@ services:
       - "9411:9411"
     networks:
       - spring
-
   eureka-server:
-    image: dlim2012/eureka-server:latest
+    image: dlim2012/tiny-url_eureka-server:latest
     container_name: eureka-server
     ports:
       - "8761:8761"
@@ -51,118 +40,16 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
     networks:
       - spring
-    depends_on:
-      - zipkin
   apigw:
-    image: dlim2012/apigw:latest
+    image: dlim2012/tiny-url_apigw:latest
     container_name: apigw
     ports:
-      - "8000:8000"
+      - "8081:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
     networks:
       - spring
-    depends_on:
-      - zipkin
-      - eureka-server
-#  token:
-#    image: dlim2012/token:latest
-#    container_name: token
-#    ports:
-#      - "8081:8081"
-#    environment:
-#      - SPRING_PROFILES_ACTIVE=docker
-#    networks:
-#      - mysql
-#      - spring
-#    depends_on:
-#      - zipkin
-#      - eureka-server
-#      - mysql
-#  url:
-#    image: dlim2012/url:latest
-#    container_name: url
-#    ports:
-#      - "8080:8080"
-#    environment:
-#      - SPRING_PROFILES_ACTIVE=docker
-#    networks:
-#      - spring
-#      - mysql
-#    depends_on:
-#      - zipkin
-#      - eureka-server
-#      - mysql
-#      - token
-
-#  mysql_master:
-#    image: mysql:8.0
-#    container_name: "mysql_master"
-#    ports:
-#      - 3307:3306
-#    environment:
-#      #      MYSQL_ALLOW_EMPTY_PASSWORD: true
-#      MYSQL_ROOT_PASSWORD: G2ak-JxG
-#    volumes:
-#      - mysql:/data/mysql
-#    networks:
-#      - mysql
-#    restart: unless-stopped
-#
-#  mysql_slave:
-#    image: mysql:8.0
-#    container_name: "mysql_slave"
-#    environment:
-#      #      MYSQL_ALLOW_EMPTY_PASSWORD: true
-#      MYSQL_ROOT_PASSWORD: G2ak-JxG
-#    ports:
-#      - 3308:3306
-#    depends_on:
-#      - mysql_master
-#    volumes:
-#      - mysql:/data/mysql
-#    networks:
-#      - mysql
-#    restart: unless-stopped
-#  mysql_master:
-#    image: mysql:8.0
-#    env_file:
-#      - ./mysql/master/mysql_master.env
-#    container_name: "mysql_master"
-#    ports:
-#      - 3307:3306
-#    volumes:
-#      - ./mysql/master/conf/mysql.conf.cnf:/etc/mysql/conf.d/mysql.conf.cnf
-##      - ./mysql/master/data:/var/lib/mysql
-#      - mysql:/var/lib/mysql
-#    networks:
-#      - mysql
-#    restart: unless-stopped
-#
-#  mysql_slave:
-#    image: mysql:8.0
-#    env_file:
-#      - ./mysql/slave/mysql_slave.env
-#    container_name: "mysql_slave"
-#    ports:
-#      - 3308:3306
-#    depends_on:
-#      - mysql_master
-#    volumes:
-#      - ./mysql/slave/conf/mysql.conf.cnf:/etc/mysql/conf.d/mysql.conf.cnf
-##      - ./mysql/slave/data:/var/lib/mysql
-#      - mysql:/var/lib/mysql
-#    networks:
-#      - mysql
-#    restart: unless-stopped
-
 networks:
-  cassandra_short:
-    driver: bridge
-  cassandra_long:
-    driver: bridge
-  mysql:
-    driver: bridge
   spring:
     driver: bridge
 

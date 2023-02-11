@@ -10,18 +10,20 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping
 @AllArgsConstructor
-public class ShortURLController {
+public class ShortUrlController {
 
-    private final ShortURLService shortURLService;
+    private final ShortUrlService shortURLService;
 
     @PostMapping(path="api/v1/short")
-    public ShortURLItem generateShortPath(@RequestBody LongURLItem longURLItem){
-        String shortURL = shortURLService.generateShortURL(longURLItem.longURL());
+    public ShortURLItem generateShortPathAndSave(@RequestBody LongURLItem longURLItem){
+        log.info("Generating new token for {}", longURLItem.longURL());
+        String shortURL = shortURLService.generateShortURLAndSave(longURLItem.longURL());
         return new ShortURLItem(shortURL);
     }
 
     @GetMapping(path="api/v1/short")
     public ShortURLItem getShortURL(@RequestBody LongURLItem longURLItem){
+        log.info("Get short URL for {}", longURLItem.longURL());
         String shortURL = shortURLService.getShortURL(longURLItem.longURL());
         return new ShortURLItem(shortURL);
     }

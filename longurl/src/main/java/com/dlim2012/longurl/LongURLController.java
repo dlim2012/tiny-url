@@ -12,25 +12,29 @@ import org.springframework.web.servlet.view.RedirectView;
 @RestController
 @RequestMapping
 @AllArgsConstructor
-public class LongURLController {
-    private final LongURLService longURLService;
+public class LongUrlController {
+    private final LongUrlService longURLService;
 
     @GetMapping(path="api/v1/longurl")
     public LongURLItem getLongURL(@RequestBody ShortURLItem shortURLItem){
-        String longURL = longURLService.getLongURL(shortURLItem.shortURL());
+        log.info("Get long URL for {}", shortURLItem.shortURL());
+        String longURL = longURLService.getLongUrlFromShortUrl(shortURLItem.shortURL());
         return new LongURLItem(longURL);
     }
 
     @PostMapping(path="api/v1/longurl")
     public void saveItem(@RequestBody URLPairItem urlPairItem){
+        log.info("Saving URL pair: ({}, {})", urlPairItem.shortPath(), urlPairItem.longURL());
         longURLService.saveItem(urlPairItem);
     }
 
     @GetMapping(path="{shortURL}")
-    public RedirectView redirect(@PathVariable("shortURL") String shortURL){
-        String longURL = longURLService.getLongURL(shortURL);
+    public RedirectView redirect(@PathVariable("shortURL") String shortUrlPath){
+        log.info("Redirection request {} received", shortUrlPath);
+        String longURL = longURLService.getLongUrlFromShortUrlPath(shortUrlPath);
         RedirectView redirectView = new RedirectView();
         redirectView.setUrl(longURL);
+        log.info("Redirection request {}: Redirecting to {}", shortUrlPath, longURL);
         return redirectView;
     }
 

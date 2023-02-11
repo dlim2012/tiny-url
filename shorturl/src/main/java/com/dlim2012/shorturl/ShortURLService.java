@@ -5,38 +5,62 @@ import com.dlim2012.clients.longurl.dto.URLPairItem;
 import com.dlim2012.clients.token.TokenClient;
 import com.dlim2012.shorturl.entity.LongToShortPath;
 import com.dlim2012.shorturl.repository.LongToShortPathRepository;
-import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.cassandra.core.CassandraOperations;
 import org.springframework.stereotype.Service;
+import java.util.Optional;
 
 @Service
-@AllArgsConstructor
-public class ShortURLService {
+@Slf4j
+public class ShortUrlService {
 
     private final LongToShortPathRepository longToShortPathRepository;
     private final TokenClient tokenClient;
     private final LongURLClient longURLClient;
-    private final ShortURLGenerator shortURLGenerator;
+    private final ShortUrlGenerator shortURLGenerator;
 
-    //TODO: use @Value
-    private final String domain = "http://example.com";
+    private final int ttl = 60 * 60 * 24 * 365;
+    private final String cqlFormat = String.format(
+            "insert into \"long_to_short_path\" (long_url, short_url_path) values (?, ?) USING TTL %d;",
+            ttl
+    );
+    private final String domain;
+
+    private CassandraOperations cassandraOperations;
 
     @Autowired
-    public ShortURLService(LongToShortPathRepository longToShortPathRepository, TokenClient tokenClient, LongURLClient longURLClient) {
+    public ShortUrlService(
+            LongToShortPathRepository longToShortPathRepository,
+            TokenClient tokenClient,
+            LongURLClient longURLClient,
+            CassandraOperations cassandraOperations,
+            @Value("${domain}") String domain
+    ) {
         this.longToShortPathRepository = longToShortPathRepository;
         this.tokenClient = tokenClient;
         this.longURLClient = longURLClient;
-        this.shortURLGenerator = new ShortURLGenerator(tokenClient, domain);
+        this.cassandraOperations = cassandraOperations;
+        this.domain = domain;
+
+        this.shortURLGenerator = new ShortUrlGenerator(tokenClient, domain);
     }
 
 
-    public String generateShortURL(String longURL) {
-        String shortPath = shortURLGenerator.generateShortURLPath();
-        longToShortPathRepository.save(new LongToShortPath(shortPath, longURL));
-        longURLClient.saveItem(new URLPairItem(shortPath, longURL));
+    public String generateShortURLAndSave(String longURL) {
+        Optional<LongToShortPath> longToShortPathOptional = longToShortPathRepository.findByLongURL(longURL);
+        String shortPath;
+        if (longToShortPathOptional.isPresent()){
+            shortPath = longToShortPathOptional.get().getShortURLPath();
+        } else {
+            shortPath = shortURLGenerator.generateShortURLPath();
+            log.info("Saving URL pair: ({}, {})", shortPath, longURL);
+            cassandraOperations.getCqlOperations().execute(cqlFormat, longURL, shortPath);
+            longURLClient.saveItem(new URLPairItem(shortPath, longURL));
+        }
         String shortURL = shortURLGenerator.shortPathToShortURL(shortPath);
-        System.out.println("Generate Short Path: " + longURL + " -> " + shortURL);
-        return shortPath;
+        return shortURL;
     }
 
     public String getShortURL(String longURL) {

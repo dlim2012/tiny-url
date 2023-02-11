@@ -4,33 +4,33 @@ import com.dlim2012.clients.token.TokenClient;
 import com.dlim2012.clients.token.config.TokenConfiguration;
 import com.dlim2012.clients.token.dto.TokenItem;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
-public class ShortURLGenerator {
+@Service
+public class ShortUrlGenerator {
 
     private final TokenClient tokenClient;
-    private final TokenConfiguration tokenConfiguration;
+    private final TokenConfiguration tokenConfiguration = new TokenConfiguration();
 
     private TokenItem tokenItem;
     private long seed;
-
-    private String domain;
+    private final String domain;
 
     @Autowired
-    public ShortURLGenerator(TokenClient tokenClient, String domain) {
+    public ShortUrlGenerator(
+            TokenClient tokenClient,
+            @Value("${domain}") String domain
+    ) {
         this.tokenClient = tokenClient;
-        this.tokenConfiguration = new TokenConfiguration();
-
         this.tokenItem = tokenClient.getToken();
+        seed = this.tokenItem.seed();
         this.domain = domain;
-
-        // todo: periodically delete expired urls (once every day) with low priority
     }
 
-
     public String generateShortURLPath(){
-        seed += tokenConfiguration.getIncrement();
         if (LocalDateTime.now().isAfter(tokenItem.tokenExpireTime()) ||
                 seed >= tokenConfiguration.getMaxNum()){
             tokenItem = tokenClient.getToken();
@@ -48,6 +48,7 @@ public class ShortURLGenerator {
             stringBuilder.append(tokenConfiguration.getCharacterMap().charAt(remainder));
         }
 
+        seed += tokenConfiguration.getIncrement();
         return stringBuilder.toString();
     }
 
