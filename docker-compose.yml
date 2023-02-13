@@ -8,52 +8,44 @@ services:
       - mysql:/data/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
-      - "3307:3306"
+      - "3306:3306"
     restart: unless-stopped
-  cassandra_shorturl:
-    container_name: cassandra_shorturl
+  cassandra:
+    container_name: cassandra
     image: cassandra:4.0
     ports:
-      - 9043:9042
+      - 9042:9042
     volumes:
-      - cassandra_shorturl:/data/cassandra_shorturl
-  cassandra_longurl:
-    container_name: cassandra_longurl
-    image: cassandra:4.0
-    ports:
-      - 9044:9042
-    volumes:
-      - cassandra_longurl:/data/cassandra_longurl
+      - cassandra:/data/cassandra
   zipkin:
     image: openzipkin/zipkin
     container_name: zipkin
     ports:
       - "9411:9411"
-    networks:
-      - spring
-  eureka-server:
-    image: dlim2012/tiny-url_eureka-server:latest
-    container_name: eureka-server
-    ports:
-      - "8761:8761"
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-    networks:
-      - spring
-  apigw:
-    image: dlim2012/tiny-url_apigw:latest
-    container_name: apigw
-    ports:
-      - "8081:8080"
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-    networks:
-      - spring
+#    networks:
+#      - spring
+#  eureka-server:
+#    image: dlim2012/tiny-url_eureka-server:latest
+#    container_name: eureka-server
+#    ports:
+#      - "8761:8761"
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker
+#    networks:
+#      - spring
+#  apigw:
+#    image: dlim2012/tiny-url_apigw:latest
+#    container_name: apigw
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      - SPRING_PROFILES_ACTIVE=docker
+#    networks:
+#      - spring
 networks:
   spring:
     driver: bridge
 
 volumes:
   mysql:
-  cassandra_shorturl:
-  cassandra_longurl:
+  cassandra:

@@ -5,16 +5,16 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.dlim2012</groupId>
-    <artifactId>TinyURL</artifactId>
+    <artifactId>TinyUrl</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <modules>
-        <module>token</module>
-        <module>clients</module>
         <module>eureka-server</module>
-        <module>shorturl</module>
-        <module>longurl</module>
         <module>apigw</module>
+        <module>appuser</module>
+        <module>shorturl</module>
+        <module>clients</module>
+        <module>token</module>
     </modules>
 
     <properties>

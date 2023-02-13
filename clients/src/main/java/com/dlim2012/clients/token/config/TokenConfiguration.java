@@ -11,7 +11,7 @@ public class TokenConfiguration {
     private final String characterMap = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     private final long MaxNum = (long) Math.pow(characterMap.length(), 7);
     private final int increment = 1_000_000_000;
-    private final int interval = 43_980_467;
+    private final int interval = 43_980_467; // prime number
     private final Period period = Period.ofYears(1);
 
     @Bean
