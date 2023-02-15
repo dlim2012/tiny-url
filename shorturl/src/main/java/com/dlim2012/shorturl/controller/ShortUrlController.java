@@ -4,6 +4,7 @@ import com.dlim2012.clients.dto.*;
 import com.dlim2012.clients.shorturl.dto.ShortUrlPathQueryRequest;
 import com.dlim2012.clients.shorturl.dto.UrlExtensionRequest;
 import com.dlim2012.clients.shorturl.dto.UrlGenerateRequest;
+import com.dlim2012.clients.shorturl.dto.UrlSaveRequest;
 import com.dlim2012.shorturl.service.ShortUrlService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
@@ -71,8 +72,17 @@ public class ShortUrlController {
     }
     @PostMapping(path="/shorturl/generate")
     public ShortUrlPathItem generateShortPathAndSave(@RequestBody UrlGenerateRequest generateRequest){
-        log.info("Generating a short URL for {} requested by {}", generateRequest.longUrl(), generateRequest.queryName());
+        log.info("Generating a short URL for {} with query name {}", generateRequest.longUrl(), generateRequest.queryName());
         return new ShortUrlPathItem(shortUrlService.generateShortUrlAndSave(generateRequest));
+    }
+
+    @PostMapping(path="/shorturl/save")
+    public void saveUrl(@RequestBody UrlSaveRequest urlSaveRequest){
+        log.info("Saving URL {} with query name {} and short URL Path of {}",
+                urlSaveRequest.longUrl(), urlSaveRequest.queryName(), urlSaveRequest.shortUrlPath());
+        shortUrlService.saveUrl(
+                urlSaveRequest.longUrl(), urlSaveRequest.shortUrlPath(), urlSaveRequest.queryName(), urlSaveRequest.text()
+        );
     }
 
     @PostMapping(path="/shorturl/extend")

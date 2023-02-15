@@ -11,6 +11,7 @@ import com.dlim2012.clients.shorturl.ShortUrlClient;
 import com.dlim2012.clients.shorturl.dto.ShortUrlPathQueryRequest;
 import com.dlim2012.clients.shorturl.dto.UrlExtensionRequest;
 import com.dlim2012.clients.shorturl.dto.UrlGenerateRequest;
+import com.dlim2012.clients.shorturl.dto.UrlSaveRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,24 +90,24 @@ public class UserService {
         }
         AppUser appUser = getAppUserForUpdate(userEmail);
         final int availableShortUrl = appUser.getAvailableShortUrl();
-
+        final String shortUrlPath;
+        final LocalDateTime now;
+        final LocalDate expireDate;
         final String queryName = generationRequest.isPrivate() ? userEmail : "";
 
-        final ShortUrlPathQuery shortUrlPathQuery = shortUrlClient.getShortURLPath(
-                new ShortUrlPathQueryRequest(longUrl, queryName));
-
-        final String shortUrlPath;
-        LocalDateTime now = LocalDateTime.now();
-        LocalDate expireDate = now.toLocalDate().plusDays(365);
-
-        if (!shortUrlPathQuery.shortUrlPath().isEmpty()) {
-            shortUrlPath = shortUrlPathQuery.shortUrlPath();
-
-            Optional<ShortUrlPathEntity> shortUrlPathEntityOptional =
-                    shortUrlPathRepository.findByUserIdAndShortUrlPathAndIsPrivate(
-                            appUser.getId(), shortUrlPath, generationRequest.isPrivate());
-
+        if (!generationRequest.shortUrlPath().isEmpty()){
+            shortUrlPath = generationRequest.shortUrlPath();
+            if (shortUrlPath.length() == 7){
+                throw new IllegalStateException("Custom short URLs should not have length of 7");
+            }
+            System.out.println(shortUrlPath);
+            Optional<ShortUrlPathEntity> shortUrlPathEntityOptional = shortUrlPathRepository.findByShortUrlPath(shortUrlPath);
             if (shortUrlPathEntityOptional.isPresent()){
+                shortUrlPathRepository.findByUserIdAndShortUrlPathAndIsPrivate(
+                        appUser.getId(), shortUrlPath, generationRequest.isPrivate()
+                ).orElseThrow(
+                        () -> new IllegalStateException("Custom short URLs already taken")
+                );
                 appUserRepository.saveAndFlush(appUser);
                 return new ShortUrlResponse(availableShortUrl,
                         getShortUrlFromShortUrlPath(shortUrlPath),
@@ -114,20 +115,60 @@ public class UserService {
                         shortUrlPathEntityOptional.get().getIsActive());
             }
 
-            shortUrlClient.extendExpiration(
-                    new UrlExtensionRequest(expireDate.plusDays(1), shortUrlPath, longUrl, queryName)
-            );
-
-        } else {
-            shortUrlPath = shortUrlClient.generateShortPathAndSave(
-                    new UrlGenerateRequest(
+            if (availableShortUrl <= 0){ throw new IllegalStateException("Not enough available short URLs."); }
+            now = LocalDateTime.now();
+            expireDate = now.toLocalDate().plusDays(365);
+            shortUrlClient.saveUrl(
+                    new UrlSaveRequest(
+                            shortUrlPath,
                             queryName,
                             longUrl,
                             generationRequest.description(),
                             expireDate
                     )
-            ).shortUrlPath();
+            );
 
+        } else {
+
+            final ShortUrlPathQuery shortUrlPathQuery = shortUrlClient.getShortURLPath(
+                    new ShortUrlPathQueryRequest(longUrl, queryName));
+
+            if (!shortUrlPathQuery.shortUrlPath().isEmpty()) {
+                shortUrlPath = shortUrlPathQuery.shortUrlPath();
+
+                Optional<ShortUrlPathEntity> shortUrlPathEntityOptional =
+                        shortUrlPathRepository.findByUserIdAndShortUrlPathAndIsPrivate(
+                                appUser.getId(), shortUrlPath, generationRequest.isPrivate());
+
+                if (shortUrlPathEntityOptional.isPresent()) {
+                    appUserRepository.saveAndFlush(appUser);
+                    return new ShortUrlResponse(availableShortUrl,
+                            getShortUrlFromShortUrlPath(shortUrlPath),
+                            shortUrlPathEntityOptional.get().getIsPrivate(),
+                            shortUrlPathEntityOptional.get().getIsActive());
+                }
+
+                if (availableShortUrl <= 0){ throw new IllegalStateException("Not enough available short URLs."); }
+                now = LocalDateTime.now();
+                expireDate = now.toLocalDate().plusDays(365);
+                shortUrlClient.extendExpiration(
+                        new UrlExtensionRequest(expireDate.plusDays(1), shortUrlPath, longUrl, queryName)
+                );
+
+            } else {
+
+                if (availableShortUrl <= 0){ throw new IllegalStateException("Not enough available short URLs."); }
+                now = LocalDateTime.now();
+                expireDate = now.toLocalDate().plusDays(365);
+                shortUrlPath = shortUrlClient.generateShortPathAndSave(
+                        new UrlGenerateRequest(
+                                queryName,
+                                longUrl,
+                                generationRequest.description(),
+                                expireDate
+                        )
+                ).shortUrlPath();
+            }
         }
 
         ShortUrlPathEntity shortUrlPathEntity = ShortUrlPathEntity.builder()
@@ -158,13 +199,11 @@ public class UserService {
         Optional<ShortUrlPathEntity> shortUrlPathEntityOptional = shortUrlPathRepository.
                 findByUserIdAndShortUrlPathAndIsPrivate(appUser.getId(), shortUrlPath, extensionRequest.isPrivate());
         if (shortUrlPathEntityOptional.isEmpty()){
-            // user doesn't own the short url
             throw new IllegalStateException("Invalid short URL");
         }
         ShortUrlPathEntity shortUrlPathEntity = shortUrlPathEntityOptional.get();
         LocalDate prevExpireDate = shortUrlPathEntity.getExpireDate();
         if (availableShortUrl < extensionRequest.number()){
-            // user doesn't have allowance
             throw new IllegalStateException("Not enough number of URLs left");
         }
         int remainingNumber = availableShortUrl - extensionRequest.number();

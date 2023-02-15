@@ -4,6 +4,7 @@ import com.dlim2012.clients.dto.ShortUrlPairItem;
 import com.dlim2012.clients.dto.ShortUrlPathQuery;
 import com.dlim2012.clients.shorturl.dto.UrlExtensionRequest;
 import com.dlim2012.clients.shorturl.dto.UrlGenerateRequest;
+import com.dlim2012.clients.shorturl.dto.UrlSaveRequest;
 import com.dlim2012.clients.token.TokenClient;
 import com.dlim2012.clients.token.config.TokenConfiguration;
 import com.dlim2012.shorturl.entity.UrlEntity;
@@ -68,19 +69,23 @@ public class ShortUrlService {
         // Assume requested (long URL, queryName) does not exist in database
         // This is handled in UserService.generateShortUrl
 
-        String shortPath = urlGenerationService.generateShortUrlPath();
-        log.info("Short URL generated for {}: {}", request.longUrl(), shortPath);
-        log.info("Saving URL pair: ({}, {})", shortPath, request.longUrl());
+        String shortUrlPath = urlGenerationService.generateShortUrlPath();
+        log.info("Short URL generated for {}: {}", request.longUrl(), shortUrlPath);
+        saveUrl(request.longUrl(), shortUrlPath, request.queryName(), request.text());
+        return shortUrlPath;
+    }
+
+
+    public void saveUrl(String longUrl, String shortUrlPath, String queryName, String text){
+        log.info("Saving URL pair: ({}, {})", shortUrlPath, longUrl);
 
         try{
-            cassandraOperations.insert(new UrlEntity(request.longUrl(), request.queryName(), shortPath, request.text()), insertOptions);
-            cassandraOperations.insert(new UrlEntity(shortPath, "", request.longUrl(), request.queryName()), insertOptions);
+            cassandraOperations.insert(new UrlEntity(longUrl, queryName, shortUrlPath, text), insertOptions);
+            cassandraOperations.insert(new UrlEntity(shortUrlPath, "", longUrl, queryName), insertOptions);
         } catch (Exception e){
             throw new RuntimeException("Failed to insert data into Cassandra");
         }
-        return shortPath;
     }
-
 
     public String queryShortUrlPath(String longUrl, String queryName){
         return urlRepository.findByKeyAndQueryName(longUrl, queryName)
@@ -162,4 +167,5 @@ public class ShortUrlService {
         cassandraOperations.insert(urlEntityByShortUrlPath, extensionInsertOptions);
         cassandraOperations.insert(urlEntityByLongUrl, extensionInsertOptions);
     }
+
 }

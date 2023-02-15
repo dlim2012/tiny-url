@@ -7,6 +7,7 @@ import com.dlim2012.clients.dto.ShortUrlPathQuery;
 import com.dlim2012.clients.shorturl.dto.ShortUrlPathQueryRequest;
 import com.dlim2012.clients.shorturl.dto.UrlExtensionRequest;
 import com.dlim2012.clients.shorturl.dto.UrlGenerateRequest;
+import com.dlim2012.clients.shorturl.dto.UrlSaveRequest;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,4 +32,7 @@ public interface ShortUrlClient {
 
     @PostMapping(path="/shorturl/shortpath")
     ShortUrlPathQuery getShortURLPath(@RequestBody ShortUrlPathQueryRequest shortUrlPathQueryRequest);
+
+    @PostMapping(path="/shorturl/save")
+    public void saveUrl(@RequestBody UrlSaveRequest urlSaveRequest);
 }

@@ -14,7 +14,7 @@ public class UrlEntity {
     private String key;
 
     @PrimaryKeyColumn(name = "query_name", ordinal = 1, type = PrimaryKeyType.PARTITIONED)
-    private String queryName;
+    private String queryName; // should have length of less than 7 for custom query name
 
     @Column("value")
     private String value;

@@ -1,9 +1,6 @@
 package com.dlim2012.appuser.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,7 +17,7 @@ import java.time.LocalDateTime;
 @Table(name = "short_url_path")
 public class ShortUrlPathEntity {
     @Id
-    @Column(name = "short_url_path", length=7)
+    @Column(name = "short_url_path", length=100)
     private String shortUrlPath;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -71,14 +68,8 @@ public class ShortUrlPathEntity {
         isActive = active;
     }
 
-    @Override
-    public String toString() {
-        return "ShortUrlPathEntity{" +
-                "shortUrlPath='" + shortUrlPath + '\'' +
-                ", createdAt=" + createdAt +
-                ", expireDate=" + expireDate +
-                ", isPrivate=" + isPrivate +
-                ", isActive=" + isActive +
-                '}';
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
+
 }

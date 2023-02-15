@@ -7,6 +7,7 @@ import com.dlim2012.appuser.entity.AppUser;
 import com.dlim2012.appuser.entity.AppUserRole;
 import com.dlim2012.appuser.repository.AppUserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,6 +19,7 @@ import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthenticationService {
   private final AppUserRepository repository;
   private final PasswordEncoder passwordEncoder;
@@ -74,7 +76,13 @@ public class AuthenticationService {
   }
 
   public boolean isValidEmail(String email){
-    Pattern pattern = Pattern.compile("^(.+)@(.+)$");
-    return pattern.matcher(email).matches();
+    if (email.length() < 7) {
+      throw new IllegalStateException(
+              String.format("Email {} is too short with length {}", email, email.length()));
+    }
+    if (!Pattern.compile("^(.+)@(.+)$").matcher(email).matches()){
+      throw new IllegalStateException(String.format("Email {} is not valid.", email));
+    }
+    return true;
   }
 }

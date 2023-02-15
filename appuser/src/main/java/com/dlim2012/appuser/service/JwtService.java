@@ -27,7 +27,7 @@ public class JwtService {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("self")
                 .issuedAt(now)
-                .expiresAt(now.plus(1, ChronoUnit.DAYS))
+                .expiresAt(now.plus(15, ChronoUnit.MINUTES))
                 .subject(userDetails.getUsername())
 //                .claim("scope", userDetails.getAuthorities())
                 .build();

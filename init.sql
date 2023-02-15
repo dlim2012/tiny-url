@@ -12,8 +12,14 @@ create table app_user (
     primary key (id)
 ) engine=InnoDB;
 
+create table app_user_seq (
+   next_val bigint
+) engine=InnoDB;
+
+insert into app_user_seq values ( 1 );
+
 create table short_url_path (
-   short_url_path varchar(7) not null,
+   short_url_path varchar(100) not null,
     created_at datetime(6) not null,
     expire_date date not null,
     is_active bit,
@@ -21,6 +27,11 @@ create table short_url_path (
     user_id integer,
     primary key (short_url_path)
 ) engine=InnoDB;
+
+alter table short_url_path
+   add constraint FKr66ldsf7g1fwadrw7atououia
+   foreign key (user_id)
+   references app_user (id);
 
 CREATE EVENT if not exists clean_app_user_urls ON schedule every 1 DAY ENABLE
     DO DELETE FROM short_url_path

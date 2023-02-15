@@ -5,6 +5,7 @@ A personal project made to practice system design.
 * Short URL generation and redirection service
 * User registration and login with JWT authentication
 * User URL allowance and management
+* Custom URL path
 * Private URL service
 
 ## Technologies
@@ -12,11 +13,10 @@ A personal project made to practice system design.
 * Spring Cloud 2022.0.1
 * Spring Security
 * JSON Web Tokens (JWT)
-* OAuth 2.0
 * Maven
 
 ## Design
-* For system design specifications, refer to the [design documentation](https://github.com/dlim2012/tiny-url-system-design/blob/main/Design%20doc.pdf).
+* For system design specifications, please refer to the [design documentation](https://github.com/dlim2012/tiny-url-system-design/blob/main/Design%20doc.pdf).
 
 <p align="center">
   <img src="diagram.png" width="700" title="hover text">
