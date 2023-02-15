@@ -1,12 +1,5 @@
-# Tiny-URL System Design
+# Tiny-URL System
 A personal project made to practice system design.
-
-## Design
-* For system design specifications, refer to the [design documentation](https://github.com/dlim2012/tiny-url-system-design/blob/main/Design%20doc.pdf).
-
-<p align="center">
-  <img src="diagram.png" width="700" title="hover text">
-</p>
 
 ## Features
 * Short URL generation and redirection service
@@ -20,6 +13,13 @@ A personal project made to practice system design.
 * Spring Security
 * JSON Web Tokens (JWT)
 * Maven
+
+## Design
+* For system design specifications, refer to the [design documentation](https://github.com/dlim2012/tiny-url-system-design/blob/main/Design%20doc.pdf).
+
+<p align="center">
+  <img src="diagram.png" width="700" title="hover text">
+</p>
 
 ## To build and run this project
 ```bash
