@@ -28,7 +28,7 @@ public class UrlGenerationService {
         this.hostname = hostname;
     }
 
-    public String generateShortURLPath(){
+    public String generateShortUrlPath(){
         if (tokenItem == null ||
                 LocalDateTime.now().isAfter(tokenItem.tokenExpireTime()) ||
                 seed >= tokenConfiguration.getMaxNum()){
@@ -51,7 +51,4 @@ public class UrlGenerationService {
         return stringBuilder.toString();
     }
 
-    public String shortPathToShortURL(String shortPath){
-        return hostname + "/" + shortPath;
-    }
 }

@@ -24,7 +24,9 @@ spring:
         - id: shorturl-redirect
           uri: lb://SHORTURL
           predicates:
-            - Path=/**
+            - Path=/{short_path}
+          filters:
+            - SetPath=/api/v1/shorturl/redirect/{short_path}
 
 eureka:
   client:

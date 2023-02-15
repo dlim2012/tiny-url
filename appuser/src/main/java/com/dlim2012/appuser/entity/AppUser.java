@@ -10,9 +10,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.HashSet;
 
 @Data
 @Builder
@@ -24,15 +24,15 @@ public class AppUser implements UserDetails {
 
   @Id
   @GeneratedValue
-  @Column(name = "id")
+  @Column(name = "id", nullable = false)
   private Integer id;
   @Column(name = "firstname", length = 50)
   private String firstname;
   @Column(name = "lastname", length = 50)
   private String lastname;
-  @Column(name = "email", length = 100)
+  @Column(name = "email", length = 100, nullable = false)
   private String email;
-  @Column(name = "password")
+  @Column(name = "password", nullable = false)
   private String password;
   @Column(name = "available_short_url")
   private int availableShortUrl;

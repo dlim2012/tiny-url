@@ -20,14 +20,20 @@ import java.time.LocalDateTime;
 @Table(name = "short_url_path")
 public class ShortUrlPathEntity {
     @Id
-    @Column(name="short_url_path", length=7)
+    @Column(name = "short_url_path", length=7)
     private String shortUrlPath;
 
-    @Column(name="created_at")
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name="expire_day")
-    private LocalDate expireDay;
+    @Column(name = "expire_date", nullable = false)
+    private LocalDate expireDate;
+
+    @Column(name = "is_private", updatable = false)
+    private Boolean isPrivate;
+
+    @Column(name = "is_active")
+    private Boolean isActive;
 
     public String getShortUrlPath() {
         return shortUrlPath;
@@ -37,12 +43,42 @@ public class ShortUrlPathEntity {
         this.shortUrlPath = shortUrlPath;
     }
 
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public LocalDate getExpireDate() {
+        return expireDate;
+    }
+
+    public void setExpireDate(LocalDate expireDate) {
+        this.expireDate = expireDate;
+    }
+
+    public Boolean getPrivate() {
+        return isPrivate;
+    }
+
+    public void setPrivate(Boolean aPrivate) {
+        isPrivate = aPrivate;
+    }
+
+    public Boolean getActive() {
+        return isActive;
+    }
+
+    public void setActive(Boolean active) {
+        isActive = active;
+    }
+
     @Override
     public String toString() {
         return "ShortUrlPathEntity{" +
                 "shortUrlPath='" + shortUrlPath + '\'' +
                 ", createdAt=" + createdAt +
-                ", expireDay=" + expireDay +
+                ", expireDate=" + expireDate +
+                ", isPrivate=" + isPrivate +
+                ", isActive=" + isActive +
                 '}';
     }
 }

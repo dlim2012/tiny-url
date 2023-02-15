@@ -1,13 +1,16 @@
 package com.dlim2012.shorturl.controller;
 
 import com.dlim2012.clients.dto.*;
+import com.dlim2012.clients.shorturl.dto.ShortUrlPathQueryRequest;
+import com.dlim2012.clients.shorturl.dto.UrlExtensionRequest;
+import com.dlim2012.clients.shorturl.dto.UrlGenerateRequest;
 import com.dlim2012.shorturl.service.ShortUrlService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 
-import java.security.Principal;
 import java.util.List;
 
 @Slf4j
@@ -16,56 +19,73 @@ import java.util.List;
 @AllArgsConstructor
 public class ShortUrlController {
 
-    private final ShortUrlService shortURLService;
-
-    // todo: remove home function
-    @GetMapping("/api/v1/shorturl/hello")
-    public String home(Principal principal) {
-        System.out.println(principal);
-        return "Hello";
-    }
+    private final ShortUrlService shortUrlService;
 
     @PostMapping(path="/api/v1/shorturl/short")
-    public ShortUrlItem getShortURL(@RequestBody LongUrlItem longURLItem){
-        log.info("Get short URL for {}", longURLItem.longUrl());
-        String shortURL = shortURLService.getShortURL(longURLItem.longUrl());
-        return new ShortUrlItem(shortURL);
+    public ShortUrlItem getShortUrl(
+            HttpServletRequest request,
+            @RequestBody LongUrlItem longUrlItem){
+        log.info("Get short URL for {}", longUrlItem.longUrl());
+        try {
+            String shortUrl = shortUrlService.queryShortUrl(longUrlItem.longUrl(), "");
+            return new ShortUrlItem(shortUrl);
+        } catch (Exception e){
+            String userEmail = shortUrlService.getUserEmail(request);
+            String shortUrl = shortUrlService.queryShortUrl(longUrlItem.longUrl(), userEmail);
+            return new ShortUrlItem(shortUrl);
+        }
     }
 
     @PostMapping(path="/api/v1/shorturl/long")
-    public LongUrlItem getLongURL(@RequestBody ShortUrlItem shortURLItem){
-        log.info("Get long URL for {}", shortURLItem.shortUrl());
-        String longURL = shortURLService.getLongUrlFromShortUrl(shortURLItem.shortUrl());
-        return new LongUrlItem(longURL);
+    public LongUrlItem getLongUrl(
+            HttpServletRequest request,
+            @RequestBody ShortUrlItem shortUrlItem){
+        log.info("Get long URL for {}", shortUrlItem.shortUrl());
+        String shortUrlPath = shortUrlService.getShortUrlPathFromShortUrl(shortUrlItem.shortUrl());
+        String LongUrl = shortUrlService.getLongUrl(shortUrlPath, request);
+        return new LongUrlItem(LongUrl);
     }
 
-    @GetMapping(path="/{shortPath}")
-    public RedirectView redirect(@PathVariable("shortPath") String shortUrlPath){
+    @GetMapping(path="/api/v1/shorturl/redirect/{shortPath}")
+    public RedirectView redirect(
+            HttpServletRequest request,
+            @PathVariable("shortPath") String shortUrlPath){
         log.info("Redirection request {} received", shortUrlPath);
-        String longURL = shortURLService.getLongUrlFromShortUrlPath(shortUrlPath);
+        String longUrl = shortUrlService.getLongUrl(shortUrlPath, request);
         RedirectView redirectView = new RedirectView();
-        redirectView.setUrl(longURL);
-        log.info("Redirection request {}: Redirecting to {}", shortUrlPath, longURL);
+        redirectView.setUrl(longUrl);
+        log.info("Redirection request {}: Redirecting to {}", shortUrlPath, longUrl);
         return redirectView;
     }
 
+
+    @PostMapping(path="/shorturl/shortpath")
+    public ShortUrlPathItem getShortURLPath(@RequestBody ShortUrlPathQueryRequest queryRequest){
+        log.info("Get short URL for {}", queryRequest.longUrl());
+        try {
+            String shortUrlPath = shortUrlService.queryShortUrlPath(queryRequest.longUrl(), queryRequest.queryName());
+            return new ShortUrlPathItem(shortUrlPath);
+        } catch (IllegalStateException e){
+            return new ShortUrlPathItem("");
+        }
+    }
     @PostMapping(path="/shorturl/generate")
-    public ShortUrlPathItem generateShortPathAndSave(@RequestBody LongUrlItem longURLItem){
-        log.info("Generating a short URL for {}", longURLItem.longUrl());
-        String shortURL = shortURLService.generateShortURLAndSave(longURLItem.longUrl());
-        return new ShortUrlPathItem(shortURL);
+    public ShortUrlPathItem generateShortPathAndSave(@RequestBody UrlGenerateRequest generateRequest){
+        log.info("Generating a short URL for {} requested by {}", generateRequest.longUrl(), generateRequest.queryName());
+        return new ShortUrlPathItem(shortUrlService.generateShortUrlAndSave(generateRequest));
     }
 
-
-//    @PostMapping(path="/shorturl/save/long")
-//    public void saveItem(@RequestBody ShortUrlPairItem shortUrlPairItem){
-//        log.info("Saving URL pair: ({}, {})", shortUrlPairItem.shortPath(), shortUrlPairItem.longURL());
-//        shortURLService.saveItem(shortUrlPairItem);
-//    }
+    @PostMapping(path="/shorturl/extend")
+    public void extendExpiration(@RequestBody UrlExtensionRequest urlExtensionRequest){
+        log.info("Expiration date extension request for {} to {}",
+                urlExtensionRequest.shortUrlPath(), urlExtensionRequest.expireDate());
+        shortUrlService.extendExpiration(urlExtensionRequest);
+    }
 
     @RequestMapping(path="/shorturl/urls")
-    public List<UrlPairItem> getUrls(@RequestBody List<ShortUrlPathItem> shortUrlPathItems){
-        return shortURLService.getUrls(shortUrlPathItems);
+    public List<ShortUrlPairItem> getUrls(@RequestBody List<ShortUrlPathQuery> shortUrlPathQueries){
+        log.info("Get Urls requested for {} number of short url paths", shortUrlPathQueries.size());
+        return shortUrlService.getUrls(shortUrlPathQueries);
     }
 
 }

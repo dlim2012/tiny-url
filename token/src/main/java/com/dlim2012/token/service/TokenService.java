@@ -29,8 +29,6 @@ public class TokenService {
     public TokenService(TokenRepository tokenRepository){
         this.tokenRepository = tokenRepository;
         seed = tokenRepository.getLastSeed().orElse(0);
-        System.out.println(seed);
-        // todo: periodically delete expired tokens (once every day) with low priority
     }
 
 
@@ -47,8 +45,6 @@ public class TokenService {
         lock.unlock();
 
         LocalDateTime now = LocalDateTime.now();
-        System.out.println(seed);
-        System.out.println(currentSeed);
         tokenRepository.save(
                 new Token(currentSeed, now, now.toLocalDate().plusYears(1).plusDays(1)))
         ;

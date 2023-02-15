@@ -4,8 +4,8 @@ import com.dlim2012.appuser.dto.AuthenticationRequest;
 import com.dlim2012.appuser.dto.AuthenticationResponse;
 import com.dlim2012.appuser.dto.RegisterRequest;
 import com.dlim2012.appuser.entity.AppUser;
-import com.dlim2012.appuser.repository.AppUserRepository;
 import com.dlim2012.appuser.entity.AppUserRole;
+import com.dlim2012.appuser.repository.AppUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +38,9 @@ public class AuthenticationService {
         throw new IllegalStateException("Email taken");
       }
     } else {
+      if (!isValidEmail(request.getEmail())){
+        throw new IllegalStateException("Invalid Email");
+      }
       appUser = AppUser.builder()
               .firstname(request.getFirstname())
               .lastname(request.getLastname())
@@ -47,10 +51,7 @@ public class AuthenticationService {
               .build();
       repository.save(appUser);
     }
-    var jwtToken = tokenService.generateToken(appUser);
-    return AuthenticationResponse.builder()
-        .token(jwtToken)
-        .build();
+    return authenticationResponse(appUser);
   }
 
   public AuthenticationResponse authenticate(AuthenticationRequest request) {
@@ -70,5 +71,10 @@ public class AuthenticationService {
     return AuthenticationResponse.builder()
             .token(jwtToken)
             .build();
+  }
+
+  public boolean isValidEmail(String email){
+    Pattern pattern = Pattern.compile("^(.+)@(.+)$");
+    return pattern.matcher(email).matches();
   }
 }

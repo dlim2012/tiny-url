@@ -7,7 +7,6 @@ import org.springframework.data.cassandra.config.SchemaAction;
 import org.springframework.data.cassandra.core.cql.keyspace.CreateKeyspaceSpecification;
 import org.springframework.data.cassandra.core.cql.keyspace.DropKeyspaceSpecification;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -36,12 +35,12 @@ public class CassandraConfig extends AbstractCassandraConfiguration {
     protected List<CreateKeyspaceSpecification> getKeyspaceCreations() {
         CreateKeyspaceSpecification specification = CreateKeyspaceSpecification.createKeyspace(keyspace)
                 .ifNotExists(true);
-        return Arrays.asList(specification);
+        return List.of(specification);
     }
 
     @Override
     protected List<DropKeyspaceSpecification> getKeyspaceDrops() {
-        return Arrays.asList();
+        return List.of();
     }
 
     @Override

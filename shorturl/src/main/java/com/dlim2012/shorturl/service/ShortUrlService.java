@@ -1,122 +1,165 @@
 package com.dlim2012.shorturl.service;
 
 import com.dlim2012.clients.dto.ShortUrlPairItem;
-import com.dlim2012.clients.dto.ShortUrlPathItem;
-import com.dlim2012.clients.dto.UrlPairItem;
+import com.dlim2012.clients.dto.ShortUrlPathQuery;
+import com.dlim2012.clients.shorturl.dto.UrlExtensionRequest;
+import com.dlim2012.clients.shorturl.dto.UrlGenerateRequest;
 import com.dlim2012.clients.token.TokenClient;
 import com.dlim2012.clients.token.config.TokenConfiguration;
-import com.dlim2012.shorturl.entity.StringToStringEntity;
-import com.dlim2012.shorturl.repository.StringToStringRepository;
+import com.dlim2012.shorturl.entity.UrlEntity;
+import com.dlim2012.shorturl.repository.UrlRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.cassandra.core.CassandraOperations;
 import org.springframework.data.cassandra.core.InsertOptions;
-import org.springframework.data.cassandra.core.cql.WriteOptions;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @Slf4j
 public class ShortUrlService {
 
-    private final StringToStringRepository stringToStringRepository;
-    private final UrlGenerationService URLGenerationService;
+    private final UrlRepository urlRepository;
+    private final UrlGenerationService urlGenerationService;
+    private final JwtDecoder jwtDecoder;
 
     private final Duration ttl = Duration.ofDays(366);
 
     private final String hostname;
     private final TokenConfiguration tokenConfiguration = new TokenConfiguration();
-    private final int shortURLLength;
+    private final int shortUrlLength;
 
     private final CassandraOperations cassandraOperations;
-//    private final WriteOptions writeOptions;
     private final InsertOptions insertOptions;
 
     @Autowired
     public ShortUrlService(
-            StringToStringRepository stringToStringRepository,
+            UrlRepository urlRepository,
             TokenClient tokenClient,
             CassandraOperations cassandraOperations,
+            JwtDecoder jwtDecoder,
             @Value("${hostname}") String hostname
     ) {
-        this.stringToStringRepository = stringToStringRepository;
+        this.urlRepository = urlRepository;
         this.cassandraOperations = cassandraOperations;
-//        this.writeOptions = WriteOptions.builder().ttl(ttl).build();
+        this.jwtDecoder = jwtDecoder;
         this.insertOptions = InsertOptions.builder().ttl(ttl).build();
-        System.out.println("TTL");
-        System.out.println(insertOptions.getTtl());
         this.hostname = hostname;
 
-        this.URLGenerationService = new UrlGenerationService(tokenClient, hostname);
-        this.shortURLLength = hostname.length() + tokenConfiguration.getTokenLength() + 1;
+        this.urlGenerationService = new UrlGenerationService(tokenClient, hostname);
+        this.shortUrlLength = hostname.length() + tokenConfiguration.getTokenLength() + 1;
     }
 
+    public String getUserEmail(HttpServletRequest httpServletRequest){
+        final String authHeader = httpServletRequest.getHeader("Authorization");
+        final String jwtString = authHeader.substring(7);
+        return jwtDecoder.decode(jwtString).getSubject();
+    }
 
-    public String generateShortURLAndSave(String longUrl) {
-        Optional<StringToStringEntity> longToShortPathOptional = stringToStringRepository.findById(longUrl);
-        String shortPath;
-        if (longToShortPathOptional.isPresent()){
-            shortPath = longToShortPathOptional.get().getValue();
-            // todo: extend time
-            cassandraOperations.insert(new StringToStringEntity(longUrl, shortPath), insertOptions);
-            cassandraOperations.insert(new StringToStringEntity(shortPath, longUrl), insertOptions);
-            log.info("Short URL for {} already exists: {}", longUrl, shortPath);
-        } else {
-            shortPath = URLGenerationService.generateShortURLPath();
-            log.info("Short URL generated for {}: {}", longUrl, shortPath);
-            log.info("Saving URL pair: ({}, {})", shortPath, longUrl);
-//            cassandraOperations.getCqlOperations().execute(cqlInsertFormat, longUrl, shortPath);
-//            cassandraOperations.getCqlOperations().execute(cqlInsertFormat, shortPath, longUrl);
-            cassandraOperations.insert(new StringToStringEntity(longUrl, shortPath), insertOptions);
-            cassandraOperations.insert(new StringToStringEntity(shortPath, longUrl), insertOptions);
+    public String generateShortUrlAndSave(UrlGenerateRequest request) {
+        // Assume requested (long URL, queryName) does not exist in database
+        // This is handled in UserService.generateShortUrl
+
+        String shortPath = urlGenerationService.generateShortUrlPath();
+        log.info("Short URL generated for {}: {}", request.longUrl(), shortPath);
+        log.info("Saving URL pair: ({}, {})", shortPath, request.longUrl());
+
+        try{
+            cassandraOperations.insert(new UrlEntity(request.longUrl(), request.queryName(), shortPath, request.text()), insertOptions);
+            cassandraOperations.insert(new UrlEntity(shortPath, "", request.longUrl(), request.queryName()), insertOptions);
+        } catch (Exception e){
+            throw new RuntimeException("Failed to insert data into Cassandra");
         }
         return shortPath;
     }
 
-    public String getShortURL(String longURL) {
-        StringToStringEntity longToShortPath = stringToStringRepository.findById(longURL)
-                .orElseThrow(() -> new IllegalStateException("long url not found: " + longURL));
-        return URLGenerationService.shortPathToShortURL(longToShortPath.getValue());
+
+    public String queryShortUrlPath(String longUrl, String queryName){
+        return urlRepository.findByKeyAndQueryName(longUrl, queryName)
+                .orElseThrow(() -> new IllegalStateException(
+                        String.format("item not found: (%s, %s)", longUrl, queryName)))
+                .getValue();
     }
 
-    public String getShortPath(String shortURL){
-        if (shortURL.length() != shortURLLength
-                || !shortURL.substring(0, hostname.length()).equals(hostname)) {
-            throw new IllegalStateException("Invalid shortUrl: " + shortURL);
+    public String getShortUrlPathFromShortUrl(String shortUrl){
+        if (shortUrl.length() != shortUrlLength
+                || !shortUrl.substring(0, hostname.length()).equals(hostname)) {
+            throw new IllegalStateException("Invalid shortUrl: " + shortUrl);
         }
-        return shortURL.substring(hostname.length()+1);
+        return shortUrl.substring(hostname.length()+1);
     }
 
-    public String getLongUrlFromShortUrl(String shortURL) {
-        String shortPath = getShortPath(shortURL);
-        return getLongUrlFromShortUrlPath(shortPath);
+    public String getShortUrlFromShortUrlPath(String shortUrlPath){
+        return hostname + "/" + shortUrlPath;
     }
 
-    public String getLongUrlFromShortUrlPath(String shortPath){
-        StringToStringEntity stringToStringEntity = stringToStringRepository.findById(shortPath)
-                .orElseThrow(() -> new IllegalStateException("short url not found: " + shortPath));
-        return stringToStringEntity.getValue();
+    public String queryShortUrl(String longUrl, String queryName) {
+        UrlEntity longToShortPath = urlRepository.findByKeyAndQueryName(longUrl, queryName)
+                .orElseThrow(() -> new IllegalStateException("long url not found: " + longUrl));
+        return getShortUrlFromShortUrlPath(longToShortPath.getValue());
     }
-//
-//    public void saveItem(ShortUrlPairItem shortUrlPairItem) {
-//        cassandraOperations.getCqlOperations().execute(cqlInsertFormat, shortUrlPairItem.shortPath(), shortUrlPairItem.longURL());
-//    }
 
-    public List<UrlPairItem> getUrls(List<ShortUrlPathItem> shortUrlPathItems) {
-        List<UrlPairItem> urlPairItems = new ArrayList<>();
-        for (ShortUrlPathItem shortUrlPathItem: shortUrlPathItems){
-            urlPairItems.add(
-                    new UrlPairItem(
-                            shortUrlPathItem.shortUrlPath(),
-                            getLongUrlFromShortUrlPath(shortUrlPathItem.shortUrlPath())
+    public String getLongUrl(String shortUrlPath, HttpServletRequest request) {
+        UrlEntity urlEntity = urlRepository.findByKeyAndQueryName(shortUrlPath, "")
+                .orElseThrow(() -> new IllegalStateException(
+                        String.format("short url not found: %s", shortUrlPath))
+                );
+        if (urlEntity.getText().isEmpty() || urlEntity.getText().equals(getUserEmail(request))){
+            return urlEntity.getValue();
+        } else {
+            throw new IllegalStateException("short url not found");
+        }
+    }
+
+    public String getLongUrlFromShortUrlPath(String shortUrlPath){
+        UrlEntity urlEntity = urlRepository.findByKeyAndQueryName(shortUrlPath, "")
+                .orElseThrow(() -> new IllegalStateException(
+                        String.format("short url not found: %s", shortUrlPath))
+                );
+        return urlEntity.getValue();
+    }
+
+    public List<ShortUrlPairItem> getUrls(List<ShortUrlPathQuery> shortUrlPathQueries) {
+        List<ShortUrlPairItem> shortUrlPairItems = new ArrayList<>();
+        for (ShortUrlPathQuery shortUrlPathQuery : shortUrlPathQueries){
+            UrlEntity urlEntity = urlRepository.findByKeyAndQueryName(shortUrlPathQuery.shortUrlPath(), "")
+                    .orElseThrow(() -> new IllegalStateException(
+                            String.format("short url not found: %s", shortUrlPathQuery.shortUrlPath()))
+                    );
+            shortUrlPairItems.add(
+                    new ShortUrlPairItem(
+                            shortUrlPathQuery.shortUrlPath(),
+                            urlEntity.getValue(),
+                            urlEntity.getText()
                     )
             );
         }
-        return urlPairItems;
+        return shortUrlPairItems;
+    }
+
+    public void extendExpiration(UrlExtensionRequest request) {
+        // Assume the request urls are valid
+        // This is handled in UserService.extendExpiration
+
+        UrlEntity urlEntityByShortUrlPath = urlRepository.findByKeyAndQueryName(request.shortUrlPath(), "")
+                .orElseThrow(() -> new IllegalStateException("Data not found in database: " + request.shortUrlPath()));
+        UrlEntity urlEntityByLongUrl = urlRepository.findByKeyAndQueryName(request.longUrl(), request.queryName())
+                .orElseThrow(() -> new IllegalStateException("Data not found in database: ("
+                        + request.shortUrlPath() + ", " + request.queryName() + ")")
+                );
+
+        Duration ttl = Duration.ofDays(ChronoUnit.DAYS.between(LocalDate.now(), request.expireDate()));
+        InsertOptions extensionInsertOptions = InsertOptions.builder().ttl(ttl).build();
+
+        cassandraOperations.insert(urlEntityByShortUrlPath, extensionInsertOptions);
+        cassandraOperations.insert(urlEntityByLongUrl, extensionInsertOptions);
     }
 }

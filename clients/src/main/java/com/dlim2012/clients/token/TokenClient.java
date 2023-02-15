@@ -10,5 +10,5 @@ import org.springframework.web.bind.annotation.GetMapping;
 )
 public interface TokenClient {
     @GetMapping("/token")
-    public TokenItem getToken();
+    TokenItem getToken();
 }
