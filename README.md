@@ -12,6 +12,7 @@ A personal project made to practice system design.
 * Spring Cloud 2022.0.1
 * Spring Security
 * JSON Web Tokens (JWT)
+* OAuth 2.0
 * Maven
 
 ## Design
