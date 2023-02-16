@@ -27,7 +27,7 @@ A personal project made to practice system design.
 git clone https://github.com/dlim2012/tiny-url-system-design.git
 cd tiny-url-system-design
 
-# Run databases: MySQL (port 3306), Cassandra (port 9042), Zipkin (port 9411)
+# Run databases and Zipkin: MySQL (port 3306), Cassandra (port 9042), Zipkin (port 9411)
 docker compose up -d
 
 # Build and run this project
