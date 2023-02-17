@@ -38,17 +38,16 @@ public class TokenService {
         Optional<Token> tokenOptional;
         do {
             seed = (seed + tokenConfiguration.getInterval()) % tokenConfiguration.getIncrement();
-            tokenOptional = tokenRepository.findById(seed);
+            tokenOptional = tokenRepository.findByIdForUpdate(seed);
 
         } while (tokenOptional.isPresent() && tokenOptional.get().getExpireDate().isAfter(LocalDate.now()));
         int currentSeed = seed;
-        lock.unlock();
 
         LocalDateTime now = LocalDateTime.now();
         tokenRepository.save(
                 new Token(currentSeed, now, now.toLocalDate().plusYears(1).plusDays(1)))
         ;
-
+        lock.unlock();
         return new TokenItem(currentSeed, now.plusSeconds(60*60*23 + random.nextInt(60*60)));
     }
 

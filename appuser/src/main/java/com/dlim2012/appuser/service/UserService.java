@@ -100,14 +100,15 @@ public class UserService {
             if (shortUrlPath.length() == 7){
                 throw new IllegalStateException("Custom short URLs should not have length of 7");
             }
-            System.out.println(shortUrlPath);
-            Optional<ShortUrlPathEntity> shortUrlPathEntityOptional = shortUrlPathRepository.findByShortUrlPath(shortUrlPath);
+            Optional<ShortUrlPathEntity> shortUrlPathEntityOptional = shortUrlPathRepository.findByShortUrlPathForUpdate(shortUrlPath);
             if (shortUrlPathEntityOptional.isPresent()){
-                shortUrlPathRepository.findByUserIdAndShortUrlPathAndIsPrivate(
+                ShortUrlPathEntity shortUrlPathEntity =  shortUrlPathRepository
+                        .findByUserIdAndShortUrlPathAndIsPrivate(
                         appUser.getId(), shortUrlPath, generationRequest.isPrivate()
                 ).orElseThrow(
                         () -> new IllegalStateException("Custom short URLs already taken")
                 );
+                shortUrlPathRepository.saveAndFlush(shortUrlPathEntity);
                 appUserRepository.saveAndFlush(appUser);
                 return new ShortUrlResponse(availableShortUrl,
                         getShortUrlFromShortUrlPath(shortUrlPath),

@@ -14,6 +14,12 @@ public interface TokenRepository extends JpaRepository<Token, Integer> {
             nativeQuery = true
     )
     Optional<Integer> getLastSeed();
+
+    @Query(
+            value = "SELECT * FROM token WHERE seed = ?1 FOR UPDATE",
+            nativeQuery = true
+    )
+    Optional<Token> findByIdForUpdate(int seed);
 }
 
 

@@ -14,6 +14,15 @@ public interface ShortUrlPathRepository extends JpaRepository<ShortUrlPathEntity
                     "where a.id = ?1 and s.short_url_path = ?2 and s.is_private = ?3",
             nativeQuery = true
     )
+    Optional<ShortUrlPathEntity> findByUserIdAndShortUrlPathAndIsPrivateForUpdate(
+            int userId, String shortUrlPath, boolean isPrivate
+    );
+
+    @Query(
+            value = "SELECT * from app_user a left join short_url_path s on a.id = s.user_id " +
+                    "where a.id = ?1 and s.short_url_path = ?2 and s.is_private = ?3",
+            nativeQuery = true
+    )
     Optional<ShortUrlPathEntity> findByUserIdAndShortUrlPathAndIsPrivate(
             int userId, String shortUrlPath, boolean isPrivate
     );
@@ -38,10 +47,10 @@ public interface ShortUrlPathRepository extends JpaRepository<ShortUrlPathEntity
 
 
     @Query(
-            value = "SELECT * from short_url_path s where s.short_url_path = ?1",
+            value = "SELECT * from short_url_path s where s.short_url_path = ?1 FOR UPDATE",
             nativeQuery = true
     )
-    Optional<ShortUrlPathEntity> findByShortUrlPath(
+    Optional<ShortUrlPathEntity> findByShortUrlPathForUpdate(
             String shortUrlPath
     );
 
