@@ -2,10 +2,12 @@ package com.dlim2012.appuser.service;
 
 import com.dlim2012.appuser.dto.AuthenticationRequest;
 import com.dlim2012.appuser.dto.AuthenticationResponse;
+import com.dlim2012.appuser.dto.Main;
 import com.dlim2012.appuser.dto.RegisterRequest;
 import com.dlim2012.appuser.entity.AppUser;
 import com.dlim2012.appuser.entity.AppUserRole;
 import com.dlim2012.appuser.repository.AppUserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -14,6 +16,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -50,6 +55,7 @@ public class AuthenticationService {
               .password(passwordEncoder.encode(request.getPassword()))
               .appUserRole(AppUserRole.USER)
               .availableShortUrl(1000)
+              .appUserCreatedAt(LocalDateTime.now())
               .build();
       repository.save(appUser);
     }
@@ -64,7 +70,9 @@ public class AuthenticationService {
         )
     );
     var appUser = repository.findByEmail(request.getEmail())
-        .orElseThrow();
+        .orElseThrow(() ->
+            new IllegalStateException("User " + request.getEmail() + " not found")
+    );
     return authenticationResponse(appUser);
   }
 
@@ -85,4 +93,17 @@ public class AuthenticationService {
     }
     return true;
   }
+
+
+  public List<Main> getMain(HttpServletRequest request) {
+    List<Main> mains = new ArrayList<>();
+    List<AppUser> appUsers = repository.findAll();
+    for (AppUser appUser: appUsers){
+      mains.add(
+              new Main(appUser.getEmail())
+      );
+    }
+    return mains;
+  }
+
 }

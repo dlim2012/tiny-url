@@ -38,6 +38,15 @@ public interface ShortUrlPathRepository extends JpaRepository<ShortUrlPathEntity
 
     @Query(
             value = "SELECT * from app_user a left join short_url_path s on a.id = s.user_id " +
+                    "where a.id = ?1 and s.is_active = ?2 ORDER BY s.created_at",
+            nativeQuery = true
+    )
+    List<ShortUrlPathEntity> findByUserIdAndIsActiveOrderByCreatedAt(
+            int userId, boolean isActive
+    );
+
+    @Query(
+            value = "SELECT * from app_user a left join short_url_path s on a.id = s.user_id " +
                     "where a.id = ?1",
             nativeQuery = true
     )
@@ -45,6 +54,14 @@ public interface ShortUrlPathRepository extends JpaRepository<ShortUrlPathEntity
             int userId
     );
 
+    @Query(
+            value = "SELECT * from app_user a left join short_url_path s on a.id = s.user_id " +
+                    "where a.id = ?1 ORDER BY s.created_at",
+            nativeQuery = true
+    )
+    List<ShortUrlPathEntity> findByUserIdOrderByCreatedAt(
+            int userId
+    );
 
     @Query(
             value = "SELECT * from short_url_path s where s.short_url_path = ?1 FOR UPDATE",

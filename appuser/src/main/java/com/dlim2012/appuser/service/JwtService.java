@@ -27,7 +27,8 @@ public class JwtService {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("self")
                 .issuedAt(now)
-                .expiresAt(now.plus(15, ChronoUnit.MINUTES))
+                // todo: change to 15 minutes
+                .expiresAt(now.plus(15, ChronoUnit.DAYS))
                 .subject(userDetails.getUsername())
 //                .claim("scope", userDetails.getAuthorities())
                 .build();
@@ -48,7 +49,6 @@ public class JwtService {
                 .build();
         return this.encoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
     }
-
 
     public boolean isTokenValid(Jwt jwt, UserDetails userDetails){
         return jwt.getSubject().equals(userDetails.getUsername()) &&

@@ -14,15 +14,17 @@ public class UrlEntity {
     private String key;
 
     @PrimaryKeyColumn(name = "query_name", ordinal = 1, type = PrimaryKeyType.PARTITIONED)
-    private String queryName; // should have length of less than 7 for custom query name
+    private String queryName;
+    // when key is a short URL path: input is "" for public URLs and username for private URLs
+    // when key is a long URL: input is "1" + username for public URLs and "2" + username for private URLs
+    // other cases: if length >= 7, could be duplicated with emails
 
     @Column("value")
     private String value;
 
     @Column("text")
     private String text;
-    // when short URL path is the key, queryName is "" and text is the username
-    // when long URL is the key, query name is the username and the text is descriptions
+
 
     public UrlEntity(String key, String queryName, String value, String text) {
         this.key = key;
@@ -62,5 +64,6 @@ public class UrlEntity {
     public void setText(String text) {
         this.text = text;
     }
+
 }
 

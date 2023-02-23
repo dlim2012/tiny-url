@@ -22,7 +22,7 @@ public class SecurityConfig {
     @Bean
     public InMemoryUserDetailsManager user() {
         return new InMemoryUserDetailsManager(
-                User.withUsername("dvega")
+                User.withUsername("adminUserName")
                         .password("{noop}password")
                         .authorities("read")
                         .build()
@@ -34,7 +34,7 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 .authorizeRequests()
-                .requestMatchers("/api/v1/auth/**")
+                .requestMatchers("/api/v1/auth/**") //"/api/v1/auth/**",
                 .permitAll()
                 .anyRequest()
                 .authenticated()

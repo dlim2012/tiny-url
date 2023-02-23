@@ -22,20 +22,6 @@ public class ShortUrlController {
 
     private final ShortUrlService shortUrlService;
 
-    @PostMapping(path="/api/v1/shorturl/short")
-    public ShortUrlItem getShortUrl(
-            HttpServletRequest request,
-            @RequestBody LongUrlItem longUrlItem){
-        log.info("Get short URL for {}", longUrlItem.longUrl());
-        try {
-            String shortUrl = shortUrlService.queryShortUrl(longUrlItem.longUrl(), "");
-            return new ShortUrlItem(shortUrl);
-        } catch (Exception e){
-            String userEmail = shortUrlService.getUserEmail(request);
-            String shortUrl = shortUrlService.queryShortUrl(longUrlItem.longUrl(), userEmail);
-            return new ShortUrlItem(shortUrl);
-        }
-    }
 
     @PostMapping(path="/api/v1/shorturl/long")
     public LongUrlItem getLongUrl(
@@ -59,30 +45,36 @@ public class ShortUrlController {
         return redirectView;
     }
 
+    @PostMapping(path="/api/v1/shorturl/short")
+    public ShortUrlQueryResponse getShortUrl(
+            HttpServletRequest request,
+            @RequestBody LongUrlItem longUrlItem){
+        log.info("Get short URL for {}", longUrlItem.longUrl());
+        return shortUrlService.getShortUrl(longUrlItem.longUrl(), request);
+    }
 
     @PostMapping(path="/shorturl/shortpath")
-    public ShortUrlPathItem getShortURLPath(@RequestBody ShortUrlPathQueryRequest queryRequest){
-        log.info("Get short URL for {}", queryRequest.longUrl());
-        try {
-            String shortUrlPath = shortUrlService.queryShortUrlPath(queryRequest.longUrl(), queryRequest.queryName());
-            return new ShortUrlPathItem(shortUrlPath);
-        } catch (IllegalStateException e){
-            return new ShortUrlPathItem("");
-        }
+    public ShortUrlPathItem getShortURLPath(
+            @RequestBody ShortUrlPathQueryRequest queryRequest
+    ){
+        log.info("Get short URL Path of {} with privacy {} for user {}",
+                queryRequest.longUrl(), queryRequest.isPrivate(), queryRequest.userEmail());
+        String shortUrlPath = shortUrlService.getShortUrlPath(queryRequest);
+        return new ShortUrlPathItem(shortUrlPath);
     }
+
     @PostMapping(path="/shorturl/generate")
     public ShortUrlPathItem generateShortPathAndSave(@RequestBody UrlGenerateRequest generateRequest){
-        log.info("Generating a short URL for {} with query name {}", generateRequest.longUrl(), generateRequest.queryName());
+        log.info("Generating a short URL of {} for {} with privacy of {}",
+                generateRequest.longUrl(), generateRequest.userEmail(), generateRequest.isPrivate());
         return new ShortUrlPathItem(shortUrlService.generateShortUrlAndSave(generateRequest));
     }
 
     @PostMapping(path="/shorturl/save")
     public void saveUrl(@RequestBody UrlSaveRequest urlSaveRequest){
-        log.info("Saving URL {} with query name {} and short URL Path of {}",
-                urlSaveRequest.longUrl(), urlSaveRequest.queryName(), urlSaveRequest.shortUrlPath());
-        shortUrlService.saveUrl(
-                urlSaveRequest.longUrl(), urlSaveRequest.shortUrlPath(), urlSaveRequest.queryName(), urlSaveRequest.text()
-        );
+        log.info("Saving URL {} with query name {} and short URL Path of {} with privacy {}",
+                urlSaveRequest.longUrl(), urlSaveRequest.userEmail(), urlSaveRequest.shortUrlPath(), urlSaveRequest.isPrivate());
+        shortUrlService.saveUrl(urlSaveRequest);
     }
 
     @PostMapping(path="/shorturl/extend")
@@ -97,5 +89,4 @@ public class ShortUrlController {
         log.info("Get Urls requested for {} number of short url paths", shortUrlPathQueries.size());
         return shortUrlService.getUrls(shortUrlPathQueries);
     }
-
 }

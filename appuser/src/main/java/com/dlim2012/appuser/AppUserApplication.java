@@ -13,8 +13,6 @@ import org.springframework.cloud.openfeign.FeignAutoConfiguration;
 @EnableFeignClients(
 		basePackages = "com.dlim2012.clients"
 )
-
-//todo: removable?
 @ImportAutoConfiguration({FeignAutoConfiguration.class})
 public class AppUserApplication {
 

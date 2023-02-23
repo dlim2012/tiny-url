@@ -4,7 +4,8 @@ import java.time.LocalDate;
 
 public record UrlSaveRequest (
         String shortUrlPath,
-        String queryName,
+        String userEmail,
+        Boolean isPrivate,
         String longUrl,
         String text,
         LocalDate expireDate

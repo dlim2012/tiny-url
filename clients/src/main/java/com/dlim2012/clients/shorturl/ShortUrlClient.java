@@ -31,7 +31,7 @@ public interface ShortUrlClient {
     void extendExpiration(@RequestBody UrlExtensionRequest urlExtensionRequest);
 
     @PostMapping(path="/shorturl/shortpath")
-    ShortUrlPathQuery getShortURLPath(@RequestBody ShortUrlPathQueryRequest shortUrlPathQueryRequest);
+    ShortUrlPathItem getShortURLPath(@RequestBody ShortUrlPathQueryRequest shortUrlPathQueryRequest);
 
     @PostMapping(path="/shorturl/save")
     public void saveUrl(@RequestBody UrlSaveRequest urlSaveRequest);

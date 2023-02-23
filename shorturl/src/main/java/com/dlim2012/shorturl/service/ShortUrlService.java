@@ -1,7 +1,7 @@
 package com.dlim2012.shorturl.service;
 
-import com.dlim2012.clients.dto.ShortUrlPairItem;
-import com.dlim2012.clients.dto.ShortUrlPathQuery;
+import com.dlim2012.clients.dto.*;
+import com.dlim2012.clients.shorturl.dto.ShortUrlPathQueryRequest;
 import com.dlim2012.clients.shorturl.dto.UrlExtensionRequest;
 import com.dlim2012.clients.shorturl.dto.UrlGenerateRequest;
 import com.dlim2012.clients.shorturl.dto.UrlSaveRequest;
@@ -23,6 +23,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -71,20 +72,48 @@ public class ShortUrlService {
 
         String shortUrlPath = urlGenerationService.generateShortUrlPath();
         log.info("Short URL generated for {}: {}", request.longUrl(), shortUrlPath);
-        saveUrl(request.longUrl(), shortUrlPath, request.queryName(), request.text());
+        _saveUrl(request.longUrl(), shortUrlPath, request.userEmail(), request.isPrivate(), request.text());
         return shortUrlPath;
     }
 
+    public void saveUrl(UrlSaveRequest urlSaveRequest){
+        _saveUrl(
+                urlSaveRequest.longUrl(),
+                urlSaveRequest.shortUrlPath(),
+                urlSaveRequest.userEmail(),
+                urlSaveRequest.isPrivate(),
+                urlSaveRequest.text()
+        );
+    }
 
-    public void saveUrl(String longUrl, String shortUrlPath, String queryName, String text){
-        log.info("Saving URL pair: ({}, {})", shortUrlPath, longUrl);
+    public void _saveUrl(String longUrl, String shortUrlPath, String userEmail, Boolean isPrivate, String text){
+        log.info("Saving URL pair: ({}, {}) with privacy {}", shortUrlPath, longUrl, isPrivate);
 
-        try{
-            cassandraOperations.insert(new UrlEntity(longUrl, queryName, shortUrlPath, text), insertOptions);
-            cassandraOperations.insert(new UrlEntity(shortUrlPath, "", longUrl, queryName), insertOptions);
-        } catch (Exception e){
-            throw new RuntimeException("Failed to insert data into Cassandra");
+        if (isPrivate){
+            try{
+                cassandraOperations.insert(
+                        new UrlEntity(longUrl, "1" + userEmail, shortUrlPath, text), insertOptions
+                );
+                cassandraOperations.insert(
+                        new UrlEntity(shortUrlPath, userEmail, longUrl, ""), insertOptions
+                );
+            } catch (Exception e){
+                throw new RuntimeException("Failed to insert data into Cassandra");
+            }
+        } else {
+
+            try{
+                cassandraOperations.insert(
+                        new UrlEntity(longUrl, "0" + userEmail, shortUrlPath, text), insertOptions
+                );
+                cassandraOperations.insert(
+                        new UrlEntity(shortUrlPath, "", longUrl, ""), insertOptions
+                );
+            } catch (Exception e){
+                throw new RuntimeException("Failed to insert data into Cassandra");
+            }
         }
+
     }
 
     public String queryShortUrlPath(String longUrl, String queryName){
@@ -106,23 +135,46 @@ public class ShortUrlService {
         return hostname + "/" + shortUrlPath;
     }
 
-    public String queryShortUrl(String longUrl, String queryName) {
-        UrlEntity longToShortPath = urlRepository.findByKeyAndQueryName(longUrl, queryName)
-                .orElseThrow(() -> new IllegalStateException("long url not found: " + longUrl));
-        return getShortUrlFromShortUrlPath(longToShortPath.getValue());
-    }
 
     public String getLongUrl(String shortUrlPath, HttpServletRequest request) {
-        UrlEntity urlEntity = urlRepository.findByKeyAndQueryName(shortUrlPath, "")
-                .orElseThrow(() -> new IllegalStateException(
-                        String.format("short url not found: %s", shortUrlPath))
-                );
-        if (urlEntity.getText().isEmpty() || urlEntity.getText().equals(getUserEmail(request))){
-            return urlEntity.getValue();
-        } else {
-            throw new IllegalStateException("short url not found");
+        Optional<UrlEntity> urlEntityOptional = urlRepository.findByKeyAndQueryName(shortUrlPath, "");
+        if (urlEntityOptional.isPresent()){
+            return urlEntityOptional.get().getValue();
         }
+        String userEmail = getUserEmail(request);
+        UrlEntity urlEntity = urlRepository.findByKeyAndQueryName(shortUrlPath, userEmail)
+                .orElseThrow(() -> new IllegalStateException(
+                        String.format("short url not found for %s: %s", userEmail, shortUrlPath))
+                );
+        return urlEntity.getValue();
     }
+
+    public ShortUrlQueryResponse getShortUrl(String longUrl, HttpServletRequest request) {
+        String userEmail = getUserEmail(request);
+        Optional<UrlEntity> urlEntityOptional0 = urlRepository.findByKeyAndQueryName(
+                longUrl, "0" + userEmail
+        );
+        Optional<UrlEntity> urlEntityOptional1 = urlRepository.findByKeyAndQueryName(
+                longUrl, "1" + userEmail
+        );
+        return new ShortUrlQueryResponse(
+                urlEntityOptional0.isPresent() ? getShortUrlFromShortUrlPath(urlEntityOptional0.get().getValue()) : "",
+                urlEntityOptional0.isPresent() ? urlEntityOptional0.get().getText() : "",
+                urlEntityOptional1.isPresent() ? getShortUrlFromShortUrlPath(urlEntityOptional1.get().getValue()) : "",
+                urlEntityOptional1.isPresent() ? urlEntityOptional1.get().getText() : ""
+        );
+    }
+
+    public String getShortUrlPath(ShortUrlPathQueryRequest request) {
+        System.out.println();
+        Optional<UrlEntity> urlEntityOptional = urlRepository.findByKeyAndQueryName(
+                request.longUrl(), (request.isPrivate() ? "1" : "0") + request.userEmail());
+        if (urlEntityOptional.isPresent()){
+            return urlEntityOptional.get().getValue();
+        }
+        return "";
+    }
+
 
     public String getLongUrlFromShortUrlPath(String shortUrlPath){
         UrlEntity urlEntity = urlRepository.findByKeyAndQueryName(shortUrlPath, "")
@@ -135,17 +187,24 @@ public class ShortUrlService {
     public List<ShortUrlPairItem> getUrls(List<ShortUrlPathQuery> shortUrlPathQueries) {
         List<ShortUrlPairItem> shortUrlPairItems = new ArrayList<>();
         for (ShortUrlPathQuery shortUrlPathQuery : shortUrlPathQueries){
-            UrlEntity urlEntity = urlRepository.findByKeyAndQueryName(shortUrlPathQuery.shortUrlPath(), "")
-                    .orElseThrow(() -> new IllegalStateException(
-                            String.format("short url not found: %s", shortUrlPathQuery.shortUrlPath()))
-                    );
-            shortUrlPairItems.add(
-                    new ShortUrlPairItem(
-                            shortUrlPathQuery.shortUrlPath(),
-                            urlEntity.getValue(),
-                            urlEntity.getText()
-                    )
-            );
+            String queryName = shortUrlPathQuery.isPrivate() ? shortUrlPathQuery.userEmail() : "";
+            try {
+                UrlEntity urlEntity = urlRepository
+                        .findByKeyAndQueryName(shortUrlPathQuery.shortUrlPath(), queryName)
+                        .orElseThrow(() -> new IllegalStateException(
+                                String.format("short url not found: (%s, %s)",
+                                        shortUrlPathQuery.shortUrlPath(), queryName))
+                        );
+                shortUrlPairItems.add(
+                        new ShortUrlPairItem(
+                                shortUrlPathQuery.shortUrlPath(),
+                                urlEntity.getValue(),
+                                urlEntity.getText()
+                        )
+                );
+            } catch (Exception e) {
+                log.info(e.toString());
+            }
         }
         return shortUrlPairItems;
     }
@@ -154,13 +213,31 @@ public class ShortUrlService {
         // Assume the request urls are valid
         // This is handled in UserService.extendExpiration
 
-        UrlEntity urlEntityByShortUrlPath = urlRepository.findByKeyAndQueryName(request.shortUrlPath(), "")
-                .orElseThrow(() -> new IllegalStateException("Data not found in database: " + request.shortUrlPath()));
-        UrlEntity urlEntityByLongUrl = urlRepository.findByKeyAndQueryName(request.longUrl(), request.queryName())
-                .orElseThrow(() -> new IllegalStateException("Data not found in database: ("
-                        + request.shortUrlPath() + ", " + request.queryName() + ")")
-                );
 
+        final String queryNameByLongUrl = (request.isPrivate() ? "1" : "0") + request.userEmail();
+        final String queryNameByShortUrl = (request.isPrivate() ? request.userEmail() : "");
+        final UrlEntity urlEntityByLongUrl;
+        final UrlEntity urlEntityByShortUrlPath;
+
+        if (request.saveIfNotExist()) {
+            if (request.longUrl().isEmpty()) {
+                throw new IllegalStateException("long URL should be provided to save if not exist.");
+            }
+            urlEntityByLongUrl = new UrlEntity(
+                    request.longUrl(), queryNameByLongUrl, request.shortUrlPath(), request.text());
+            urlEntityByShortUrlPath = new UrlEntity(
+                    request.shortUrlPath(), queryNameByShortUrl, request.longUrl(), "");
+        } else {
+            urlEntityByShortUrlPath = urlRepository.findByKeyAndQueryName(
+                    request.shortUrlPath(), queryNameByShortUrl
+            ).orElseThrow(() -> new IllegalStateException("Data not found in database: ("
+                    + request.shortUrlPath() + ", " + queryNameByShortUrl + ")")
+            );
+            urlEntityByLongUrl = urlRepository.findByKeyAndQueryName(
+                    urlEntityByShortUrlPath.getValue(), queryNameByLongUrl
+            ).orElseThrow(() -> new IllegalStateException("Data not found in database: ("
+                    + urlEntityByShortUrlPath.getValue() + ", " + queryNameByLongUrl + ")"));
+        }
         Duration ttl = Duration.ofDays(ChronoUnit.DAYS.between(LocalDate.now(), request.expireDate()));
         InsertOptions extensionInsertOptions = InsertOptions.builder().ttl(ttl).build();
 

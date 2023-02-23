@@ -9,7 +9,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import javax.management.relation.Role;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -37,6 +37,8 @@ public class AppUser implements UserDetails {
   private String password;
   @Column(name = "available_short_url")
   private int availableShortUrl;
+  @Column(name = "app_user_created_at", nullable=false)
+  private LocalDateTime appUserCreatedAt;
 
   @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
   @JoinColumn(name = "user_id", referencedColumnName = "id")
