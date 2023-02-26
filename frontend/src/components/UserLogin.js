@@ -1,49 +1,46 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
-import axios from 'axios';
-import { NavLink, useNavigate, useLocation, createSearchParams } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import Cookies from "universal-cookie";
 import jwt from "jwt-decode"
-import { Button, Checkbox, Form, Input } from 'antd';
+import { Button, Form, Input } from 'antd';
+import { successNotification, errorNotification } from '../Notification'
+import { post } from '../clients'
 
 
 
-export function UserLogin ({jwtAuth, setJwtAuth}) {
-
+export function UserLogin () {
 
     const navigate = useNavigate();
     const cookies = new Cookies();
     const location = useLocation();
-  
 
-    const onFinish = (values) => {
-      try {
-          axios.post("/api/v1/auth/login",
-          {
-            email: values.username,
-            password: values.password
-          }
-          ).then(response => {
-            const jwt_authentication = response.headers.jwt_authentication;
-            setJwtAuth(jwt_authentication);
-            const decoded = jwt(jwt_authentication)
-            cookies.set("jwt_authentication", response.headers.jwt_authentication, {
-              expires: new Date(decoded.exp * 1000)
-            });
-            console.log("JWT added to cookies")
-            console.log("User login successful");
-            console.log(location.state);
-            navigate(location.state.from.pathname);
-            // navigate({
-            //   pathname: location.state.from.pathname,
-            //   search: createSearchParams({ jwt: jwt_authentication }).toString()
-            // });
-          }
-          );
+  const onFinish = (values) => {
+    const payload = {
+        email: values.username,
+        password: values.password
       }
-      catch (error){
-        console.log("user login failed. " + error)
+    post("/api/v1/auth/login", payload)
+    .then(response => response.json())
+      .then(data => {
+        console.log(data)
+        const jwt_authentication = data.token;
+        const decoded = jwt(jwt_authentication)
+        cookies.set("jwt_authentication", jwt_authentication, {
+          expires: new Date(decoded.exp * 1000)
+        });
+        console.log("User logged in");
+        successNotification("User logged in")
+        localStorage.setItem('jwt', jwt_authentication);
+        navigate(location.state.from);
       }
-    };
+      ). catch (error => {
+      console.log(error)
+      error.response.json().then(data => {
+        console.log(data);
+        errorNotification("User login failed", `${data.message}`);
+      })
+    })
+  }
     
     const onFinishFailed = (errorInfo) => {
       console.log('Failed:', errorInfo);
@@ -74,14 +71,14 @@ export function UserLogin ({jwtAuth, setJwtAuth}) {
           name="username"
           rules={[{ required: true, message: 'Please input your username!' }]}
         >
-          <Input placeholder='Enter email address'/>
+          <Input placeholder='Enter your email address'/>
         </Form.Item>
         <Form.Item
           label="Password"
           name="password"
           rules={[{ required: true, message: 'Please input your password!' }]}
         >
-          <Input.Password placeholder='Enter password'/>
+          <Input.Password placeholder='Enter your password'/>
         </Form.Item>
     
         <Form.Item wrapperCol={{ offset: 8, span: 16 }}>

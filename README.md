@@ -1,5 +1,5 @@
 # Tiny-URL System
-A personal project made to practice system design.
+A personal project made to practice system design. ([Website](http://76.23.247.67))
 
 ## Features
 * Short URL generation and redirection service
@@ -29,7 +29,7 @@ A personal project made to practice system design.
 ## Front-end
 
 <p align="center">
-  <img src="front-end.png" width="700" title="hover text">
+  <img src="front-end.png" width="1000" title="hover text">
 </p>
 
 ## To build and run this project
@@ -49,7 +49,7 @@ java -jar shorturl/target/shorturl-1.0-SNAPSHOT.jar # Run Short URL service (por
 java -jar token/target/token-1.0-SNAPSHOT.jar # Run Token service (port 8083)
 
 # Build and run front-end
-npm install
-sudo PORT=80 npm start # Run front-end (port 80)
+npm install --prefix frontend
+npm start --prefix frontend # Run front-end (port 3000)
 ```
 

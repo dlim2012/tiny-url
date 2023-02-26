@@ -3,6 +3,8 @@ package com.dlim2012.appuser.controller;
 
 import com.dlim2012.appuser.dto.*;
 import com.dlim2012.appuser.service.UserService;
+import com.dlim2012.clients.appuser.dto.ExpireDateRequest;
+import com.dlim2012.clients.appuser.dto.ExpireDateResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,8 +20,7 @@ import java.util.List;
 public class AppUserController {
     private final UserService userService;
 
-
-    @PostMapping("/generate")
+    @PostMapping("/urls/generate")
     public GenerationResponse generateShortUrl(HttpServletRequest request, @RequestBody GenerationRequest generationRequest){
         String userEmail = userService.getUserEmail(request);
         log.info(
@@ -29,13 +30,13 @@ public class AppUserController {
         return userService.generateShortUrl(userEmail, generationRequest);
     }
 
-    @PostMapping("/extend")
+    @PostMapping("/urls/extend")
     public ExtensionResponse extendExpiration(HttpServletRequest request, @RequestBody ExtensionRequest extensionRequest){
         String userEmail = userService.getUserEmail(request);
         log.info(
                 "Short URL extension request from user {}: {}",
                 userEmail,
-                extensionRequest.shortUrl()
+                extensionRequest.longUrl()
         );
         return userService.extendExpiration(userEmail, extensionRequest);
     }
@@ -57,28 +58,33 @@ public class AppUserController {
         return userService.getUrls(userEmail, getUrlsRequest);
     }
 
-    // todo: update active/inactive to Cassandra
-    @PostMapping(path="/urls/disactivate")
-    public void disactivateUserUrl(HttpServletRequest request, @RequestBody ModifyUrlRequest modifyUrlRequest) {
+    @PutMapping(path="/urls/set-is-active")
+    public void setUrlIsActive(HttpServletRequest request, @RequestBody setUrlIsActiveRequest setUrlIsActiveRequest) {
         String userEmail = userService.getUserEmail(request);
-        log.info("Getting all urls of user {}", userEmail);
-        userService.disActivateUserUrl(userEmail, modifyUrlRequest);
+        log.info("Modifying isActive for short URL {} with privacy {} of {}",
+                setUrlIsActiveRequest.shortUrl(), setUrlIsActiveRequest.isPrivate(), userEmail);
+        userService.setUrlIsActive(userEmail, setUrlIsActiveRequest);
     }
 
-    @PostMapping(path="/urls/activate")
-    public void activateUserUrl(HttpServletRequest request, @RequestBody ModifyUrlRequest modifyUrlRequest) {
+    @PostMapping(path="/urls/modify")
+    public ShortUrlModificationResponse modifyShortUrlPath(HttpServletRequest request, @RequestBody ShortUrlModificationRequest modificationRequest){
         String userEmail = userService.getUserEmail(request);
-        log.info("Getting all urls of user {}", userEmail);
-        userService.activateUserUrl(userEmail, modifyUrlRequest);
+        log.info("Modifying short URL path for {} with privacy {} to be {} with newDescription {}",
+                modificationRequest.longUrl(), modificationRequest.isPrivate(),
+                modificationRequest.newShortUrlPath(), modificationRequest.newDescription());
+        return userService.modifyShortUrlPath(userEmail, modificationRequest);
     }
 
     @GetMapping(path="/profile")
-    public GetProfileResponse getProfile(HttpServletRequest request){
+    GetProfileResponse getProfile(HttpServletRequest request){
         String userEmail = userService.getUserEmail(request);
         log.info("Get profile of user {}", userEmail);
         return userService.getProfile(userEmail);
-
     }
 
-
+    @PostMapping(path="/expire-date")
+    List<ExpireDateResponse> getExpireDate(@RequestBody List<ExpireDateRequest> expireDateRequests){
+        log.info("Expire Date requested");
+        return userService.getExpireDate(expireDateRequests);
+    }
 }

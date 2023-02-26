@@ -1,13 +1,14 @@
 import React from 'react';
 import Cookies from "universal-cookie";
-import { useNavigate, Navigate } from 'react-router-dom';
-import {Home} from './Home'
+import { Navigate } from 'react-router-dom'
+import { successNotification, errorNotification } from '../Notification'
 
 export function UserLogout({setJwtAuth}) {
     const cookies = new Cookies();
     cookies.remove("jwt_authentication");
-    console.log("JWT removed to cookies")
-    setJwtAuth("");
-    return <div>Logged out</div>;
-    // return <Navigate to="/" />;
+    localStorage.removeItem('jwt')
+
+    successNotification("User logged out")
+    return <Navigate to='/' />
 }
+

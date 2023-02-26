@@ -37,7 +37,7 @@ public class ResourceSecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests()
+                .authorizeRequests()
                 .requestMatchers("/api/v1/shorturl/**", "/shorturl/**")
                 .permitAll()
 //                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())

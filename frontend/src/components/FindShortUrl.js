@@ -9,9 +9,9 @@ import {
   } from 'antd';
 
 import { useState } from 'react';
-import Cookies from "universal-cookie";
-import  { getShortUrls } from '../clients'
+import  { postWithJwt } from '../clients'
 import { loadingIcon } from './utils';
+import { successNotification, errorNotification } from '../Notification'
 
 
 export const FindShortUrl = () => {
@@ -21,12 +21,11 @@ export const FindShortUrl = () => {
     const [hasPublic, setHasPublic] = useState(false);
     const [hasPrivate, setHasPrivate] = useState(false);
     const [fetching, setFetching] = useState(false);
-    const cookies = new Cookies();
 
     const onFinish = (values) => {
         setFetching(true);
-        try{
-          getShortUrls(cookies.get("jwt_authentication"), values.longUrl)
+        const payload = { longUrl: values.longUrl }
+          postWithJwt("/api/v1/shorturl/short", payload)
           .then(response => response.json())
           .then(data =>{
             console.log(data)
@@ -34,18 +33,33 @@ export const FindShortUrl = () => {
               setHasPublic(data.publicShortUrl !== '');
               setHasPrivate(data.privateShortUrl !== '');
               setIsToggled(true);
-          })
-        } catch(error){
-            console.log(error);
-        } finally {
-          setFetching(false);
-        }
-      };
-
+          }).catch (error => {
+            console.log(error)
+            error.response.json().then(data => {
+                console.log(data)
+                errorNotification("Extend expiration failed", `${data.message}`)
+            })}).finally ( () => {
+            setFetching(false)
+            })
+          }
 
       if (fetching) {
         return <Spin indicator={loadingIcon} />
     }
+
+    const publicUrl = <Descriptions title="My URLs" bordered>
+        <Descriptions.Item label="Short URL">{shortUrls.publicShortUrl}</Descriptions.Item>
+        <Descriptions.Item label="Description">{shortUrls.publicDescription}</Descriptions.Item>
+        <Descriptions.Item label="Expire Date">{shortUrls.publicDescription}</Descriptions.Item>
+        <Descriptions.Item label="Private">{shortUrls.publicDescription}</Descriptions.Item>
+        <Descriptions.Item label="Active">{shortUrls.publicDescription}</Descriptions.Item>
+    </Descriptions>
+
+    const privateUrl = <Descriptions bordered>
+    <Descriptions.Item label="Private Short URL">{shortUrls.privateShortUrl}</Descriptions.Item>
+    <Descriptions.Item label="Private Description">{shortUrls.privateDescription}</Descriptions.Item>
+    </Descriptions>
+
     return (
         <>
         <br />
@@ -77,25 +91,19 @@ export const FindShortUrl = () => {
           </Form>
             { isToggled && !hasPrivate && !hasPublic && <Empty/>}
 
-            { isToggled && hasPublic && 
-            <Descriptions title="My URLs" bordered>
-                <Descriptions.Item label="Public Short URL">{shortUrls.publicShortUrl}</Descriptions.Item>
-                <Descriptions.Item label="Public Description">{shortUrls.publicDescription}</Descriptions.Item>
-            </Descriptions>
-            }
-            { isToggled && !hasPublic && hasPrivate &&
-            <Descriptions title="My URLs" bordered>
-                <Descriptions.Item label="Private Short URL">{shortUrls.privateShortUrl}</Descriptions.Item>
-                <Descriptions.Item label="Private Description">{shortUrls.privateDescription}</Descriptions.Item>
-            </Descriptions>
-            }
-            { isToggled && hasPublic && hasPrivate &&
-            <Descriptions bordered>
-                <Descriptions.Item label="Private Short URL">{shortUrls.privateShortUrl}</Descriptions.Item>
-                <Descriptions.Item label="Private Description">{shortUrls.privateDescription}</Descriptions.Item>
-            </Descriptions>
-            }
+          { isToggled && hasPublic && <Descriptions title="Public URL" bordered>
+        <Descriptions.Item label="Short URL">{shortUrls.publicShortUrl}</Descriptions.Item>
+        <Descriptions.Item label="Description">{shortUrls.publicDescription}</Descriptions.Item>
+        <Descriptions.Item label="Expire Date">{shortUrls.publicExpireDate}</Descriptions.Item>
+        <Descriptions.Item label="Active">{shortUrls.publicIsActive ? "O" :"X"}</Descriptions.Item>
+    </Descriptions>}
 
+          { isToggled && hasPrivate && <Descriptions title="Private URL" bordered>
+        <Descriptions.Item label="Short URL">{shortUrls.privateShortUrl}</Descriptions.Item>
+        <Descriptions.Item label="Description">{shortUrls.privateDescription}</Descriptions.Item>
+        <Descriptions.Item label="Expire Date">{shortUrls.privateExpireDate}</Descriptions.Item>
+        <Descriptions.Item label="Active">{shortUrls.privateIsActive ? "O" : "X"}</Descriptions.Item>
+    </Descriptions>}
           </>
       );
 }

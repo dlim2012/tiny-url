@@ -39,7 +39,7 @@ public class AuthenticationService {
       if (request.getFirstname().equals(appUser.getFirstname())
               && request.getLastname().equals(appUser.getLastname())){
         if (!passwordEncoder.matches(request.getPassword(), appUser.getPassword())){
-          throw new IllegalStateException("User exists but entered a wrong password");
+          throw new IllegalStateException("Wrong password");
         }
       } else {
         throw new IllegalStateException("Email taken");
@@ -64,15 +64,15 @@ public class AuthenticationService {
 
   public AuthenticationResponse authenticate(AuthenticationRequest request) {
     authenticationManager.authenticate(
-        new UsernamePasswordAuthenticationToken(
-            request.getEmail(),
-            request.getPassword()
-        )
+            new UsernamePasswordAuthenticationToken(
+                    request.getEmail(),
+                    request.getPassword()
+            )
     );
     var appUser = repository.findByEmail(request.getEmail())
-        .orElseThrow(() ->
-            new IllegalStateException("User " + request.getEmail() + " not found")
-    );
+            .orElseThrow(() ->
+                    new IllegalStateException("Username not found")
+            );
     return authenticationResponse(appUser);
   }
 
@@ -80,6 +80,7 @@ public class AuthenticationService {
     var jwtToken = tokenService.generateToken(userDetails);
     return AuthenticationResponse.builder()
             .token(jwtToken)
+            .message("")
             .build();
   }
 

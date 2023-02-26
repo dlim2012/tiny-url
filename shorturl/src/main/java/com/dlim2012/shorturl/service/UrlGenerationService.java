@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 public class UrlGenerationService {
@@ -18,6 +20,7 @@ public class UrlGenerationService {
     private TokenItem tokenItem = null;
     private long seed = -1;
     private final String hostname;
+    private final Lock lock = new ReentrantLock();
 
     @Autowired
     public UrlGenerationService(
@@ -26,14 +29,18 @@ public class UrlGenerationService {
     ) {
         this.tokenClient = tokenClient;
         this.hostname = hostname;
+        refreshToken();
+    }
+
+    public void refreshToken(){
+        tokenItem = tokenClient.getToken();
+        seed = tokenItem.seed();
     }
 
     public String generateShortUrlPath(){
-        if (tokenItem == null ||
-                LocalDateTime.now().isAfter(tokenItem.tokenExpireTime()) ||
-                seed >= tokenConfiguration.getMaxNum()){
-            tokenItem = tokenClient.getToken();
-            seed = tokenItem.seed();
+        lock.lock();
+        if (LocalDateTime.now().isAfter(tokenItem.tokenExpireTime())){
+            refreshToken();
         }
 
         long num = seed;
@@ -48,6 +55,12 @@ public class UrlGenerationService {
         }
 
         seed += tokenConfiguration.getIncrement();
+
+
+        if (seed >= tokenConfiguration.getMaxNum()){
+            refreshToken();
+        }
+        lock.unlock();
         return stringBuilder.toString();
     }
 

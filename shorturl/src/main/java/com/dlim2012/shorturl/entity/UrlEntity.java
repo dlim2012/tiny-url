@@ -25,12 +25,15 @@ public class UrlEntity {
     @Column("text")
     private String text;
 
+    @Column("is_active")
+    private Boolean isActive;
 
-    public UrlEntity(String key, String queryName, String value, String text) {
+    public UrlEntity(String key, String queryName, String value, String text, Boolean isActive) {
         this.key = key;
         this.queryName = queryName;
         this.value = value;
         this.text = text;
+        this.isActive = isActive;
     }
 
     public String getKey() {
@@ -64,6 +67,15 @@ public class UrlEntity {
     public void setText(String text) {
         this.text = text;
     }
+
+    public Boolean getActive() {
+        return isActive;
+    }
+
+    public void setActive(Boolean active) {
+        isActive = active;
+    }
+
 
 }
 

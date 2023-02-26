@@ -72,4 +72,14 @@ public interface ShortUrlPathRepository extends JpaRepository<ShortUrlPathEntity
     );
 
 
+    @Query(
+            value = "SELECT * from short_url_path s where s.short_url_path = ?1",
+            nativeQuery = true
+    )
+    Optional<ShortUrlPathEntity> findByShortUrlPath(
+            String shortUrlPath
+    );
+
+
+
 }

@@ -3,6 +3,7 @@ USE tiny_url;
 
 create table app_user (
    id integer not null,
+    app_user_created_at datetime(6) not null,
     app_user_role varchar(255),
     available_short_url integer,
     email varchar(100) not null,
@@ -10,7 +11,7 @@ create table app_user (
     lastname varchar(50),
     password varchar(255) not null,
     primary key (id)
-) engine=InnoDB;
+) engine=InnoDB
 
 create table app_user_seq (
    next_val bigint
@@ -26,7 +27,7 @@ create table short_url_path (
     is_private bit,
     user_id integer,
     primary key (short_url_path)
-) engine=InnoDB;
+) engine=InnoDB
 
 alter table short_url_path
    add constraint FKr66ldsf7g1fwadrw7atououia

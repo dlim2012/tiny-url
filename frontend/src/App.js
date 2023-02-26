@@ -1,4 +1,4 @@
-import {Routes, Route, NavLink} from 'react-router-dom'
+import {Routes, Route, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
 import {Home} from './components/Home'
 import {About} from './components/About'
@@ -10,6 +10,9 @@ import {UserProfile} from './components/UserProfile'
 import { BreadCrumbView } from './components/BreadCrumbView'
 import { ExtendExpiration } from './components/ExtendExpiration'
 import { FindShortUrl } from './components/FindShortUrl'
+import { ModifyPath } from './components/ModifyPath'
+import { ModifyPathWrapper } from './components/ModifyPathWrapper'
+import { ExtendExpirationWrapper } from './components/ExtendExpirationWrapper'
 import { 
   FileOutlined,
    UserOutlined, 
@@ -18,10 +21,20 @@ import {
      LogoutOutlined,
      ProfileOutlined, 
      HomeOutlined,
-     SearchOutlined } from '@ant-design/icons';
+     SearchOutlined,
+    EditOutlined
+   } from '@ant-design/icons';
 import { Breadcrumb, Layout, Menu, theme } from 'antd';
 import { useState } from 'react';
 import { ProtectedRoutes } from './components/ProtectedRoutes'
+import { postWithJwt } from './clients'
+import { successNotification, errorNotification } from './Notification'
+
+
+const pathToKey = {
+  "/pages/user/url-edit-path": "/pages/user/edit-path",
+  "/pages/user/url-extend": "/pages/user/extend"
+}
 
 const { Header, Content, Footer, Sider } = Layout;
 function getItem(label, key, icon, children) {
@@ -33,28 +46,55 @@ function getItem(label, key, icon, children) {
   };
 }
 const items = [
-  getItem('Home', '1', <NavLink to="/"><HomeOutlined /></NavLink>),
-  getItem('About', '2', <NavLink to="/pages/About"><DesktopOutlined /></NavLink>),
-  getItem('User', 'sub1', <UserOutlined />, [
-    getItem('User Profile', '7', <NavLink to="/pages/user"><ProfileOutlined /></NavLink>),
-    getItem('My URLs', '8', <NavLink to="/pages/user/url"><FileOutlined /></NavLink>),
-    getItem('Find Short URL', '3', <NavLink to="/pages/user/find-short-url"><SearchOutlined /></NavLink>),
-    getItem('Extend', '10', <NavLink to="/pages/user/extend"><FileAddOutlined /></NavLink>),
-    getItem('Logout', '9', <NavLink to="/pages/user/logout"><LogoutOutlined /></NavLink>),
+  getItem('Home', "/", <NavLink to="/"><HomeOutlined /></NavLink>),
+  getItem('About', "/pages/About", <NavLink to="/pages/About"><DesktopOutlined /></NavLink>),
+  getItem('User', '/pages/login', <UserOutlined />, [
+    getItem('User Profile', "/pages/user", <NavLink to="/pages/user"><ProfileOutlined /></NavLink>),
+    getItem('My URLs', "/pages/user/urls", <NavLink to="/pages/user/urls"><FileOutlined /></NavLink>),
+    getItem('Edit Path', "/pages/user/edit-path", <NavLink to="/pages/user/edit-path"><EditOutlined /></NavLink>),
+    getItem('Extend', "/pages/user/extend", <NavLink to="/pages/user/extend"><FileAddOutlined /></NavLink>),
+    getItem('Find Short URL', "/pages/user/find-short-url", <NavLink to="/pages/user/find-short-url"><SearchOutlined /></NavLink>),
+    getItem('Logout', "/pages/user/logout", <NavLink to="/pages/user/logout"><LogoutOutlined /></NavLink>),
     ])
 ];
 
-
-function RedirectService(props) {
-  console.log("Redirecting... " + props.state);
-  window.open('http://localhost:8080/' + props.state, "_self")
-}
-
-
-
 function App() {
     const [collapsed, setCollapsed] = useState(false);
-    const [jwtAuth, setJwtAuth] = useState("");
+    const location = useLocation();
+    const { pathname } = location;
+    const navigate = useNavigate();
+
+    //console.log("App(1): " + ((localStorage.getItem("jwt") !== null) ? jwt(localStorage.getItem("jwt")).sub : ""))
+    // console.log("App(2): " + ((cookies.get("jwt_authentication") !== null) ? jwt(cookies.get("jwt_authentication")).sub : ""))
+
+    function RedirectService(props) {
+      console.log("Redirecting... " + props.state);
+      const payload = { shortUrlPath: props.state}
+      postWithJwt("/api/v1/shorturl/long", payload)
+        .then(response => response.json())
+        .then(data => {
+          console.log(data);
+          if (data.isActive){
+            window.open(data.longUrl, "_self")
+          } else {
+            errorNotification("Redirect failed", "URL is inactive.")
+            navigate('/');
+          }
+        }).catch(
+          error => {
+            error.response.json().then(data => {
+              console.log(data)
+              if (localStorage.getItem("jwt") == null){
+                errorNotification("Redirect failed", "URL not found")
+              }
+              else {
+                errorNotification("Redirect failed", "URL not found for the user.");
+              }
+            navigate('/');
+            })}
+        );
+    }
+
 
     const {
         token: { colorBgContainer },
@@ -77,7 +117,7 @@ function App() {
                 background: 'rgba(255, 255, 255, 0.2)',
               }}
             />
-            <Menu theme="dark" defaultSelectedKeys={['1']} mode="inline" items={items} />
+            <Menu theme="dark" selectedKeys={[pathname in pathToKey ? pathToKey[pathname] : pathname]} mode="inline" items={items} />
 
           </Sider>
           <Layout className="site-layout">
@@ -109,16 +149,18 @@ function App() {
              <Routes>
                  <Route path="/" element={<Home />}/>
                  <Route path="/pages/about" element={<About />}/>
-                  {/* <Route path="/pages/order-summary" element={<OrderSumamry />}/> */}
-                  <Route path="/pages/login" element={<UserLogin jwtAuth={jwtAuth} setJwtAuth={setJwtAuth} />}/>
-                  <Route path="/pages/register" element={<UserRegistration jwtAuth={jwtAuth} setJwtAuth={setJwtAuth}/>}/>
-                  <Route path="/pages/user/logout" element={<UserLogout setJwtAuth={setJwtAuth}/>}/>
-                  // <Route path="/:name" element={<RedirectService />}/>
-                 <Route element={<ProtectedRoutes jwtAuth={jwtAuth} setJwtAuth={setJwtAuth} />}>
+                  <Route path="/pages/login" element={<UserLogin />}/>
+                  <Route path="/pages/register" element={<UserRegistration/>}/>
+                  <Route path="/pages/user/logout" element={<UserLogout/>}/>
+                   <Route path="/:name" element={<RedirectService />}/>
+                 <Route element={<ProtectedRoutes />}>
                     <Route path="/pages/user" element={<UserProfile />}/>
-                    <Route path="/pages/user/url" element={<Url />}/>
+                    <Route path="/pages/user/urls" element={<Url />}/>
                     <Route path="/pages/user/find-short-url" element={<FindShortUrl />}/>
-                    <Route path="/pages/user/extend" element={<ExtendExpiration />}/>
+                    <Route path="/pages/user/extend" element={<ExtendExpirationWrapper />}/>
+                    <Route path="/pages/user/url-extend" element={<ExtendExpiration />}/>
+                    <Route path="/pages/user/edit-path" element={<ModifyPathWrapper />}/>
+                    <Route path="/pages/user/url-edit-path" element={<ModifyPath />}/>
                  </Route>
              </Routes>
               </div>

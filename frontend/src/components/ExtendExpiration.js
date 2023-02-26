@@ -4,15 +4,14 @@ import {
     Form,
     Input,
     Switch,
-    Empty,
     Descriptions,
     Spin
   } from 'antd';
 
 import { useState } from 'react';
-import Cookies from "universal-cookie";
-import  { getExtensionUrlResponse } from '../clients'
+import  { postWithJwt } from '../clients'
 import { loadingIcon } from './utils';
+import { successNotification, errorNotification } from '../Notification'
 
 
 
@@ -22,27 +21,37 @@ export const ExtendExpiration = () => {
     const [extensionResponse, setExtensionResponse] = useState({});
     const [isToggled, setIsToggled] = useState(false);
     const [fetching, setFetching] = useState(false);
-    const cookies = new Cookies();
 
     const onFinish = (values) => {
         setFetching(true);
-        getExtensionUrlResponse(cookies.get("jwt_authentication"), 
-        {
-            number: 1,
-            shortUrl: values.shortUrl,
-            isPrivate: values.isPrivate == null ? false : true
-        })
-        .then(response => response.json())
-        .then(data =>{
-            setExtensionResponse(data);
-            setIsToggled(true);
-        })
-        setFetching(false);
+        const isPrivate = (values.isPrivate == null ? localStorage.getItem("isPrivate") === "O" : values.isPrivate == false)
+    
+        const payload = {
+          number: 1,
+          longUrl: values.longUrl,
+          isPrivate: isPrivate
+        }
+            postWithJwt("/api/v1/user/urls/extend", payload)
+            .then(response => response.json())
+            .then(data =>{
+                setExtensionResponse(data);
+                setIsToggled(true);
+                successNotification("URL expiration extended", ``)
+            }).catch (error => {
+            console.log(error)
+            error.response.json().then(data => {
+                console.log(data)
+                errorNotification("Extend expiration failed", `${data.message}`)
+            })}).finally ( () => {
+            setFetching(false)
+            })
+    
     };
 
     if (fetching) {
         return <Spin indicator={loadingIcon} />
     }
+
 
     return (
         <>
@@ -56,21 +65,22 @@ export const ExtendExpiration = () => {
               onFinish={onFinish}
             >
             <Form.Item
-                label="Short URL"
-                name="shortUrl"
+                label="Original URL"
+                name="longUrl"
+                initialValue={localStorage.getItem("longUrl")}
                 rules={[{
                     required: true,
-                    message: 'Short URL is required',
+                    message: 'Registered original URL is required',
                   }]}
                 >
-              <Input placeholder="Enter a Short URL (Required)"/>
+              <Input placeholder="Enter an Original URL registered by this account (Required)"/>
             </Form.Item>
             <Form.Item
                 label="Private URL"
                 valuePropName="checked"
                 name="isPrivate"
                 >
-              <Switch />
+                <Switch defaultChecked={localStorage.getItem("isPrivate") === "O"} />
             </Form.Item>
               <Form.Item
                   wrapperCol={{

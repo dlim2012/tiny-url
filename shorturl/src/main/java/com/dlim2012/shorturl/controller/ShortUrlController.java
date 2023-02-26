@@ -1,10 +1,9 @@
 package com.dlim2012.shorturl.controller;
 
 import com.dlim2012.clients.dto.*;
-import com.dlim2012.clients.shorturl.dto.ShortUrlPathQueryRequest;
-import com.dlim2012.clients.shorturl.dto.UrlExtensionRequest;
-import com.dlim2012.clients.shorturl.dto.UrlGenerateRequest;
-import com.dlim2012.clients.shorturl.dto.UrlSaveRequest;
+import com.dlim2012.clients.shorturl.dto.*;
+import com.dlim2012.shorturl.dto.RedirectionRequest;
+import com.dlim2012.shorturl.entity.UrlEntity;
 import com.dlim2012.shorturl.service.ShortUrlService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
@@ -22,33 +21,42 @@ public class ShortUrlController {
 
     private final ShortUrlService shortUrlService;
 
-
     @PostMapping(path="/api/v1/shorturl/long")
-    public LongUrlItem getLongUrl(
+    public LongUrlItem getLongUrlFromShortUrlPath(
             HttpServletRequest request,
-            @RequestBody ShortUrlItem shortUrlItem){
-        log.info("Get long URL for {}", shortUrlItem.shortUrl());
-        String shortUrlPath = shortUrlService.getShortUrlPathFromShortUrl(shortUrlItem.shortUrl());
-        String LongUrl = shortUrlService.getLongUrl(shortUrlPath, request);
-        return new LongUrlItem(LongUrl);
+            @RequestBody ShortUrlPathItem shortUrlPathItem){
+        log.info("Get long URL of {}", shortUrlPathItem.shortUrlPath());
+        UrlEntity urlEntity = shortUrlService.getUrlEntityByShortUrlPath(shortUrlPathItem.shortUrlPath(), request);
+        log.info("Get long URL of {}: returning {} (active : {})", shortUrlPathItem.shortUrlPath(), urlEntity.getValue(), urlEntity.getActive());
+        return new LongUrlItem(urlEntity.getValue(), urlEntity.getActive());
     }
 
-    @GetMapping(path="/api/v1/shorturl/redirect/{shortPath}")
+    @GetMapping(path="/api/v1/shorturl/redirect/{shortUrlPath}")
     public RedirectView redirect(
             HttpServletRequest request,
-            @PathVariable("shortPath") String shortUrlPath){
+            @PathVariable("shortUrlPath") String shortUrlPath){
         log.info("Redirection request {} received", shortUrlPath);
-        String longUrl = shortUrlService.getLongUrl(shortUrlPath, request);
         RedirectView redirectView = new RedirectView();
+        String longUrl = shortUrlService.getLongUrl(shortUrlPath, request);
         redirectView.setUrl(longUrl);
         log.info("Redirection request {}: Redirecting to {}", shortUrlPath, longUrl);
         return redirectView;
     }
 
+    @PostMapping(path="/api/v1/shorturl/redirect-json")
+    public RedirectView redirectJson(
+            HttpServletRequest request,
+            @RequestBody RedirectionRequest redirectionRequest
+            ){
+        String shortUrlPath = redirectionRequest.shortUrlPath();
+        return redirect(request, shortUrlPath);
+    }
+
     @PostMapping(path="/api/v1/shorturl/short")
     public ShortUrlQueryResponse getShortUrl(
             HttpServletRequest request,
-            @RequestBody LongUrlItem longUrlItem){
+            @RequestBody LongUrlItem longUrlItem
+    ){
         log.info("Get short URL for {}", longUrlItem.longUrl());
         return shortUrlService.getShortUrl(longUrlItem.longUrl(), request);
     }
@@ -78,15 +86,25 @@ public class ShortUrlController {
     }
 
     @PostMapping(path="/shorturl/extend")
-    public void extendExpiration(@RequestBody UrlExtensionRequest urlExtensionRequest){
-        log.info("Expiration date extension request for {} to {}",
-                urlExtensionRequest.shortUrlPath(), urlExtensionRequest.expireDate());
-        shortUrlService.extendExpiration(urlExtensionRequest);
+    public UrlExtensionResponse extendExpiration(@RequestBody UrlExtensionRequest urlExtensionRequest){
+        log.info("Expiration date extension request for {} of {}",
+                urlExtensionRequest.longUrl(), urlExtensionRequest.userEmail());
+        return shortUrlService.extendExpiration(urlExtensionRequest);
     }
 
     @RequestMapping(path="/shorturl/urls")
     public List<ShortUrlPairItem> getUrls(@RequestBody List<ShortUrlPathQuery> shortUrlPathQueries){
         log.info("Get Urls requested for {} number of short url paths", shortUrlPathQueries.size());
         return shortUrlService.getUrls(shortUrlPathQueries);
+    }
+
+    @PostMapping(path="/shorturl/set-is-active")
+    public void setIsActive(@RequestBody ModifyIsActiveRequest modifyIsActiveRequest){
+        shortUrlService.setIsActive(modifyIsActiveRequest);
+    }
+
+    @PostMapping(path="/shorturl/modify-path")
+    public ModifyPathResponse modifyPath(@RequestBody ModifyPathRequest modifyPathRequest){
+        return shortUrlService.modifyPath(modifyPathRequest);
     }
 }

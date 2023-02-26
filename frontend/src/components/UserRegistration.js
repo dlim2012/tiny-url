@@ -1,9 +1,10 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
-import axios from 'axios';
-import { useNavigate, useLocation, createSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Cookies from "universal-cookie";
 import jwt from "jwt-decode"
 import { Button, Form, Input } from 'antd';
+import { successNotification, errorNotification } from '../Notification'
+import { post } from '../clients'
 
 function makeid(length) {
   let result = '';
@@ -17,12 +18,11 @@ function makeid(length) {
   return result;
 }
 
-export function UserRegistration ({jwtAuth, setJwtAuth}) {
+export function UserRegistration () {
   const navigate = useNavigate();
   const cookies = new Cookies();
   const [form] = Form.useForm();
   const location = useLocation();
-  // const location = useLocation();
 
   const onFill = () => {
     const id = makeid(6)
@@ -35,38 +35,34 @@ export function UserRegistration ({jwtAuth, setJwtAuth}) {
   }
 
   const onFinish = (values) => {
-    try {
-      {
-        axios.post("/api/v1/auth/register",
-        {
-          firstname: values.firstname,
-          lastname: values.lastname,
-          email: values.username,
-          password: values.password
-        }
-        ).then(response => {
-          const jwt_authentication = response.headers.jwt_authentication;
-          setJwtAuth(jwt_authentication);
-          const decoded = jwt(jwt_authentication)
-          cookies.set("jwt_authentication", response.headers.jwt_authentication, {
-            expires: new Date(decoded.exp * 1000)
-          });
-          console.log("JWT added to cookies")
-          console.log("User registration successful.");
-          navigate(location.state.from);
-        }
-        );
-
-        
-        // navigate('/');
+    const payload = {
+      firstname: values.firstname,
+      lastname: values.lastname,
+      email: values.username,
+      password: values.password
+    }
+    post("/api/v1/auth/register", payload)
+    .then(response => response.json())
+      .then(data => {
+        const jwt_authentication = data.token;
+        const decoded = jwt(jwt_authentication)
+        cookies.set("jwt_authentication", jwt_authentication, {
+          expires: new Date(decoded.exp * 1000)
+        });
+        console.log("User registered");
+        successNotification("User registered")
+        localStorage.setItem('jwt', jwt_authentication);
+        navigate(location.state.from);
       }
-    }
-    catch (error){
+      ). catch (error => {
       console.log(error)
-      console.log("User registration failed.")
-    }
-  };
-  
+      error.response.json().then(data => {
+        console.log(data);
+        errorNotification("User registration failed", `${data.message}`);
+      })
+    })
+  }
+
   const onFinishFailed = (errorInfo) => {
     console.log('Failed:', errorInfo);
   };
@@ -129,4 +125,5 @@ export function UserRegistration ({jwtAuth, setJwtAuth}) {
     );
 }
 export default UserRegistration;
+
 

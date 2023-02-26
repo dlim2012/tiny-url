@@ -2,7 +2,7 @@ package com.dlim2012.appuser.dto;
 
 public record ExtensionRequest(
         int number,
-        String shortUrl,
+        String longUrl,
         boolean isPrivate
 ){
 }

@@ -27,8 +27,7 @@ public class JwtService {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("self")
                 .issuedAt(now)
-                // todo: change to 15 minutes
-                .expiresAt(now.plus(15, ChronoUnit.DAYS))
+                .expiresAt(now.plus(30, ChronoUnit.DAYS))
                 .subject(userDetails.getUsername())
 //                .claim("scope", userDetails.getAuthorities())
                 .build();
@@ -43,7 +42,7 @@ public class JwtService {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("self")
                 .issuedAt(now)
-                .expiresAt(now.plus(1, ChronoUnit.HOURS))
+                .expiresAt(now.plus(30, ChronoUnit.DAYS))
                 .subject(authentication.getName())
                 .claim("scope", scope)
                 .build();

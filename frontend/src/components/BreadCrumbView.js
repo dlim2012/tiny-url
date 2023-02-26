@@ -3,13 +3,17 @@ import { useLocation, Link } from 'react-router-dom'
 import { Breadcrumb } from 'antd'
 
 const breadcrumbNames = {
-    'url': 'URLs',
+    'urls': 'My URLs',
     'about': 'About',
     'user': 'User',
     'user-profile': 'User Profile',
     'login': 'Login',
     'generate': 'Generate',
-    'find-short-url': 'Find Short URL'
+    'find-short-url': 'Find Short URL',
+    'edit-path': 'Edit Path',
+    'url-edit-path': 'Edit Path',
+    'extend': 'Extend',
+    'url-extend': 'Extend'
 }
 
 const mapPath = (name) =>
@@ -44,5 +48,3 @@ export const BreadCrumbView = () => {
         </div>
     )
 }
-
-// export default BreadCrumbView;

@@ -1,6 +1,4 @@
 
-
-
 const checkStatus = response => {
     console.log(response)
     if (response.ok) {
@@ -8,68 +6,84 @@ const checkStatus = response => {
     }
     const error = new Error(response.statusText);
     error.response = response;
+    console.log(error)
     return Promise.reject(error);
 }
 
-export const getProfile = (jwt_authentication) => {
+export const getProfile = () => {
     const requestOptions = {
         method: 'GET',
         headers: {
-            'Authorization': "Bearer " + jwt_authentication
+            'Authorization': "Bearer " + localStorage.getItem("jwt")
         }
     };
     return fetch("/api/v1/user/profile", requestOptions)
         .then(checkStatus)
 }
 
-export const getUrl = (jwt_authentication) => {
+export const postWithJwt = (path, payload) => {
     const requestOptions = {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': "Bearer " + jwt_authentication
+            'Authorization': "Bearer " + localStorage.getItem("jwt") 
         },
-        body: JSON.stringify({ isActive: 2})
+        body: JSON.stringify(payload)
     };
-    return fetch("/api/v1/user/urls", requestOptions)
+    return fetch(path, requestOptions)
     .then(checkStatus)
 }
 
-export const getGenerateUrlResponse = (jwt_authentication, payload) => {
+export const post = (path, payload) => {
     const requestOptions = {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': "Bearer " + jwt_authentication
         },
         body: JSON.stringify(payload)
     };
-    return fetch("/api/v1/user/generate", requestOptions)
-        .then(checkStatus)
-}
-
-export const getShortUrls = (jwt_authentication, longUrl) => {
-    const requestOptions = {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': "Bearer " + jwt_authentication
-        },
-        body: JSON.stringify({ longUrl: longUrl })
-    };
-    return fetch("/api/v1/shorturl/short", requestOptions)
+    return fetch(path, requestOptions)
         .then(response => checkStatus(response))
 }
 
-export const getExtensionUrlResponse = (jwt_authentication, payload) => {
+export const putWithJwt = (path, payload) => {
     const requestOptions = {
-        method: 'POST',
+        method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': "Bearer " + jwt_authentication
+            'Authorization': "Bearer " + localStorage.getItem("jwt") 
         },
         body: JSON.stringify(payload)
     };
-    return fetch("/api/v1/user/extend", requestOptions)
-        .then(response => checkStatus(response))
+    return fetch(path, requestOptions)
+    .then(checkStatus)
 }
+
+// export const redirect = (pathname) => {
+//     const requestOptions = {
+//         crossDomain:true,
+//         method: 'GET',
+//         headers: {
+//             'Authorization': "Bearer " + localStorage.getItem("jwt") 
+//         }
+//     };
+//     return fetch("/api/v1/shorturl/redirect/" + pathname, requestOptions)
+//         .then(response => checkStatus(response))
+// }
+
+// export const redirectJson = (pathname) => {
+//     const requestOptions = {
+//         crossDomain:true,
+//         method: 'POST',
+//         headers: {
+//             'Content-Type': 'application/json',
+//             'Authorization': "Bearer " + localStorage.getItem("jwt") ,
+//             'jwt_authentication': "Bearer " + localStorage.getItem("jwt") ,
+//             'Access-Control-Allow-Origin': '*'
+//         },
+//         body: JSON.stringify({ shortUrlpath: pathname })
+//     };
+//     console.log(requestOptions);
+//     return fetch("/api/v1/shorturl/redirect-json", requestOptions)
+//         .then(response => checkStatus(response))
+// }

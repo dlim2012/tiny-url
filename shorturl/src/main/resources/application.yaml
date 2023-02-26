@@ -1,5 +1,8 @@
 server:
   port: 8082
+  error:
+    include-message: always
+    include-binding-errors: always
 
 rsa:
   public-key: classpath:certs/public.pem
@@ -27,4 +30,4 @@ eureka:
       defaultZone: http://localhost:8761/eureka
     enabled: true
 
-hostname: http://127.0.0.1
+hostname: http://76.23.247.67

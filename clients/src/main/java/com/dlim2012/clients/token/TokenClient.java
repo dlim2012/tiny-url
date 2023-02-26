@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 @FeignClient(
         name = "token",
         url = "${clients.token.url}"
+//        configuration = FeignConfig.class
 )
 public interface TokenClient {
     @GetMapping("/token")
