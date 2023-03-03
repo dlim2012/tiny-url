@@ -24,8 +24,9 @@ export const ExtendExpiration = () => {
 
     const onFinish = (values) => {
         setFetching(true);
-        const isPrivate = (values.isPrivate == null ? localStorage.getItem("isPrivate") === "O" : values.isPrivate == false)
-    
+        console.log(values)
+        const isPrivate = (values.isPrivate == null ? localStorage.getItem("isPrivate") === "O" : values.isPrivate)
+  
         const payload = {
           number: 1,
           longUrl: values.longUrl,
@@ -41,7 +42,7 @@ export const ExtendExpiration = () => {
             console.log(error)
             error.response.json().then(data => {
                 console.log(data)
-                errorNotification("Extend expiration failed", `${data.message}`)
+                errorNotification("Extend expiration failed", isPrivate ? `Private URL with path ${values.longUrl} not found for the user` : `Public URL with path ${values.longUrl} not found for the user`)
             })}).finally ( () => {
             setFetching(false)
             })
@@ -92,10 +93,11 @@ export const ExtendExpiration = () => {
               </Form.Item>
             </Form>
             { isToggled && <Descriptions title="Extension result" bordered>
+                <Descriptions.Item label="Short URL">{extensionResponse.shortUrl}</Descriptions.Item>
             <Descriptions.Item label="Extended">{extensionResponse.isExtended ? "True" : "False"}</Descriptions.Item>
               <Descriptions.Item label="Previous Expire Date">{extensionResponse.prevExpireDate}</Descriptions.Item>
                 <Descriptions.Item label="New Expire Date">{extensionResponse.newExpireDate}</Descriptions.Item>
-                <Descriptions.Item label="Available Short URLs">{extensionResponse.remainingNumber}</Descriptions.Item>
+                <Descriptions.Item label="Remaining URL balance">{extensionResponse.remainingNumber}</Descriptions.Item>
             </Descriptions> }
             </>
         );

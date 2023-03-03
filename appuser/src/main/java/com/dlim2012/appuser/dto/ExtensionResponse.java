@@ -1,11 +1,13 @@
 package com.dlim2012.appuser.dto;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public record ExtensionResponse (
         boolean isExtended,
-        LocalDate prevExpireDate,
-        LocalDate newExpireDate,
-        int remainingNumber
+        String prevExpireDate,
+        String newExpireDate,
+        int remainingNumber,
+        String shortUrl
 ) {
 }

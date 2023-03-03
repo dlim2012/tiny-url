@@ -1,4 +1,4 @@
-package com.dlim2012.shorturl.service;
+package com.dlim2012.appuser.service;
 
 import com.dlim2012.clients.token.TokenClient;
 import com.dlim2012.clients.token.config.TokenConfiguration;
@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -26,10 +27,16 @@ public class UrlGenerationService {
     public UrlGenerationService(
             TokenClient tokenClient,
             @Value("${hostname}") String hostname
-    ) {
+    ) throws InterruptedException {
         this.tokenClient = tokenClient;
         this.hostname = hostname;
-        refreshToken();
+        while (tokenItem == null) {
+            try {
+                refreshToken();
+            } catch (Exception e) {
+                TimeUnit.SECONDS.sleep(1);
+            }
+        }
     }
 
     public void refreshToken(){

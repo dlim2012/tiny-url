@@ -25,7 +25,7 @@ export const FindShortUrl = () => {
     const onFinish = (values) => {
         setFetching(true);
         const payload = { longUrl: values.longUrl }
-          postWithJwt("/api/v1/shorturl/short", payload)
+          postWithJwt("/api/v1/user/urls/short", payload)
           .then(response => response.json())
           .then(data =>{
             console.log(data)

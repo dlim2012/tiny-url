@@ -29,11 +29,11 @@ export const UserProfile = () => {
     const refillRequest = () =>
             postWithJwt("/api/v1/user/refill", refillPayload)
             .then(
-              successNotification("Available URLs added", `${profile.availableShortUrl} -> ${profile.availableShortUrl + refillPayload.number}`))
+              successNotification("URL balance added", `${profile.availableShortUrl} -> ${profile.availableShortUrl + refillPayload.number}`))
             .catch(error => 
               error.response.json().then(data => {
                 console.log(data)
-                errorNotification("Add to # available URLs Failed", `${data.message}`)
+                errorNotification("Add URL balance Failed", `${data.message}`)
               }))
             .then(() => fetchProfile())
 

@@ -2,26 +2,23 @@ package com.dlim2012.appuser.service;
 
 import com.dlim2012.appuser.dto.*;
 import com.dlim2012.appuser.entity.AppUser;
-import com.dlim2012.appuser.entity.ShortUrlPathEntity;
+import com.dlim2012.appuser.entity.UrlEntity;
 import com.dlim2012.appuser.repository.AppUserRepository;
-import com.dlim2012.appuser.repository.ShortUrlPathRepository;
+import com.dlim2012.appuser.repository.UrlRepository;
 import com.dlim2012.clients.appuser.dto.ExpireDateRequest;
 import com.dlim2012.clients.appuser.dto.ExpireDateResponse;
-import com.dlim2012.clients.dto.ShortUrlPairItem;
-import com.dlim2012.clients.dto.ShortUrlPathItem;
-import com.dlim2012.clients.dto.ShortUrlPathQuery;
-import com.dlim2012.clients.shorturl.ShortUrlClient;
-import com.dlim2012.clients.shorturl.dto.*;
+import com.dlim2012.appuser.dto.ShortUrlQueryResponse;
+import com.dlim2012.clients.token.TokenClient;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.configurationprocessor.json.JSONObject;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -32,43 +29,48 @@ import java.util.Optional;
 @Slf4j
 public class UserService {
 
-    private final ShortUrlClient shortUrlClient;
     private final AppUserRepository appUserRepository;
-    private final ShortUrlPathRepository shortUrlPathRepository;
+    private final UrlRepository urlRepository;
     private final JwtDecoder jwtDecoder;
 
     private final String hostname;
+    private final UrlGenerationService urlGenerationService;
+    private final DateTimeFormatter dateTimeFormatter;
 
 
     @Autowired
     public UserService(
-            ShortUrlClient shortUrlClient,
             AppUserRepository appUserRepository,
-            ShortUrlPathRepository shortUrlPathRepository,
+            UrlRepository urlRepository,
             JwtDecoder jwtDecoder,
+            TokenClient tokenClient,
             @Value("${hostname}") String hostname
-    ) {
-        this.shortUrlClient = shortUrlClient;
+    ) throws InterruptedException {
         this.appUserRepository = appUserRepository;
-        this.shortUrlPathRepository = shortUrlPathRepository;
+        this.urlRepository = urlRepository;
         this.jwtDecoder = jwtDecoder;
         this.hostname = hostname;
+        this.urlGenerationService = new UrlGenerationService(tokenClient, hostname);
+        this.dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     }
 
-    public String getUserEmail(HttpServletRequest httpServletRequest){
+    public String getUserEmail(HttpServletRequest httpServletRequest) {
         final String authHeader = httpServletRequest.getHeader("Authorization");
         final String jwtString = authHeader.substring(7);
         Jwt jwt = jwtDecoder.decode(jwtString);
         return jwt.getSubject();
     }
 
-    AppUser getAppUser(String userEmail){
+
+    @Cacheable(cacheNames = "cache2", key = "'#app_user'")
+    AppUser getAppUser(String userEmail) {
         return appUserRepository.findByEmail(userEmail).orElseThrow(
                 () -> new IllegalStateException("Authorized user does not exist in repository.")
         );
     }
 
-    AppUser getAppUserForUpdate(String userEmail){
+    @Cacheable(cacheNames = "cache2", key = "'#app_user'")
+    AppUser getAppUserForUpdate(String userEmail) {
         return appUserRepository.findByEmailForUpdate(userEmail).orElseThrow(
                 () -> new IllegalStateException("Authorized user does not exist in repository.")
         );
@@ -79,7 +81,7 @@ public class UserService {
     }
 
     public String getShortUrlPathFromShortUrl(String shortUrl) {
-        return shortUrl.substring(hostname.length()+1);
+        return shortUrl.substring(hostname.length() + 1);
     }
 
     public String getErrorMessageFromResponse(String response) {
@@ -90,198 +92,122 @@ public class UserService {
         try {
             obj = new JSONObject(response.substring(i1, i2 + 1));
             return obj.getString("message");
-        } catch (Exception e){
+        } catch (Exception e) {
             throw new IllegalStateException("");
         }
     }
 
-    public GenerationResponse generateShortUrl (
+    public GenerationResponse generateShortUrl(
             String userEmail,
             GenerationRequest generationRequest
-    ){
+    ) {
         String longUrl = generationRequest.longUrl();
-        if (longUrl.length() <= 7){
-            throw new IllegalStateException(
-                    String.format("Provided long URL is too short (length: %d, minimum 8 required)", longUrl.length()));
+        if (longUrl.length() <= 7) {
+            throw new IllegalStateException("Provided long URL is too short (minimum length 8 required)");
         }
         AppUser appUser = getAppUserForUpdate(userEmail);
         final int availableShortUrl = appUser.getAvailableShortUrl();
         final String shortUrlPath;
-        final LocalDateTime now;
-        final LocalDate expireDate;
 
-        if (!generationRequest.shortUrlPath().isEmpty()){
+        if (!generationRequest.shortUrlPath().isEmpty()) {
             shortUrlPath = generationRequest.shortUrlPath();
-            if (shortUrlPath.length() == 7){
-                throw new IllegalStateException("Custom short URLs should not have length of 7");
+            if (shortUrlPath.length() <= 7) {
+                throw new IllegalStateException("Custom path should have length of at least 8");
             }
-            Optional<ShortUrlPathEntity> shortUrlPathEntityOptional = shortUrlPathRepository
+            Optional<UrlEntity> urlEntityOptional = urlRepository
                     .findByShortUrlPathForUpdate(shortUrlPath);
-            if (shortUrlPathEntityOptional.isPresent()){
-                ShortUrlPathEntity shortUrlPathEntity =  shortUrlPathRepository
-                        .findByUserIdAndShortUrlPathAndIsPrivate(
-                        appUser.getId(), shortUrlPath, generationRequest.isPrivate()
-                ).orElseThrow(
-                        () -> new IllegalStateException("Custom short URLs already taken")
-                );
-                shortUrlPathRepository.saveAndFlush(shortUrlPathEntity);
+            if (urlEntityOptional.isPresent()) {
+                UrlEntity urlEntity = urlEntityOptional.get();
+                urlRepository.saveAndFlush(urlEntity);
                 appUserRepository.saveAndFlush(appUser);
-                throw new IllegalStateException("The short URL is already used by this account");
+                if (!urlEntity.getAppUser().getId().equals(appUser.getId())){
+                    throw new IllegalStateException("Custom short URLs already taken");
+                }
+                throw new IllegalStateException("The custom path is already taken by this account");
             }
-
-            if (availableShortUrl <= 0){ throw new IllegalStateException("Not enough available short URLs."); }
-            now = LocalDateTime.now();
-            expireDate = now.toLocalDate().plusDays(365);
-            try {
-                shortUrlClient.saveUrl(
-                        new UrlSaveRequest(
-                                shortUrlPath,
-                                userEmail,
-                                generationRequest.isPrivate(),
-                                longUrl,
-                                generationRequest.description(),
-                                expireDate
-                        )
-                );
-            } catch (Exception e){
-                throw new IllegalStateException(getErrorMessageFromResponse(e.getMessage()));
-            }
-
         } else {
-            final ShortUrlPathItem shortUrlPathItem;
-            try {
-                shortUrlPathItem = shortUrlClient.getShortURLPath(
-                        new ShortUrlPathQueryRequest(longUrl, userEmail, generationRequest.isPrivate())
+            Optional<UrlEntity> urlEntityOptional = urlRepository.findByUserIdAndLongUrlAndIsPrivate(
+                    appUser.getId(), longUrl, generationRequest.isPrivate()
+            );
+            if (urlEntityOptional.isPresent()) {
+                throw new IllegalStateException(
+                        String.format("The %s URL is already registered by this user.",
+                                generationRequest.isPrivate() ? "private" : "public")
                 );
-            } catch (Exception e){
-                throw new IllegalStateException(getErrorMessageFromResponse(e.getMessage()));
             }
-
-            if (!shortUrlPathItem.shortUrlPath().isEmpty()) {
-                final String shortUrlPath1 = shortUrlPathItem.shortUrlPath();
-
-                Optional<ShortUrlPathEntity> shortUrlPathEntityOptional =
-                        shortUrlPathRepository.findByUserIdAndShortUrlPathAndIsPrivate(
-                                appUser.getId(), shortUrlPath1, generationRequest.isPrivate());
-
-
-                if (shortUrlPathEntityOptional.isPresent()) {
-                    appUserRepository.saveAndFlush(appUser);
-                    throw new IllegalStateException("The URL is already registered by this account");
-                }
-
-                // A URL still exists in Cassandra but not in MySQL: make a new one
-                if (availableShortUrl <= 0){ throw new IllegalStateException("Not enough available short URLs."); }
-                now = LocalDateTime.now();
-                expireDate = now.toLocalDate().plusDays(365);
-                try{
-                    shortUrlPath = shortUrlClient.generateShortPathAndSave(
-                            new UrlGenerateRequest(
-                                    userEmail,
-                                    generationRequest.isPrivate(),
-                                    longUrl,
-                                    generationRequest.description(),
-                                    expireDate
-                            )
-                    ).shortUrlPath();
-                } catch (Exception e){
-                    throw new IllegalStateException(getErrorMessageFromResponse(e.getMessage()));
-                }
-
-            } else {
-
-                if (availableShortUrl <= 0){ throw new IllegalStateException("Not enough available short URLs."); }
-                now = LocalDateTime.now();
-                expireDate = now.toLocalDate().plusDays(365);
-                try {
-                    shortUrlPath = shortUrlClient.generateShortPathAndSave(
-                            new UrlGenerateRequest(
-                                    userEmail,
-                                    generationRequest.isPrivate(),
-                                    longUrl,
-                                    generationRequest.description(),
-                                    expireDate
-                            )
-                    ).shortUrlPath();
-                } catch (Exception e){
-                    throw new IllegalStateException(getErrorMessageFromResponse(e.getMessage()));
-                }
-
-            }
+            shortUrlPath = this.urlGenerationService.generateShortUrlPath();
         }
 
-        ShortUrlPathEntity shortUrlPathEntity = ShortUrlPathEntity.builder()
+        if (availableShortUrl <= 0) {
+            throw new IllegalStateException("Not enough available short URLs.");
+        }
+        final LocalDateTime now = LocalDateTime.now();
+        final LocalDateTime expiresAt = now.plusYears(1);
+        UrlEntity urlEntity = UrlEntity.builder()
                 .shortUrlPath(shortUrlPath)
+                .longUrl(generationRequest.longUrl())
+                .text(generationRequest.description())
                 .createdAt(now)
-                .expireDate(expireDate)
+                .expiresAt(expiresAt)
                 .isPrivate(generationRequest.isPrivate())
                 .isActive(true)
+                .appUser(appUser)
                 .build();
-        appUser.getShortUrlPathEntities().add(shortUrlPathEntity);
+        appUser.getUrlEntities().add(urlEntity);
 
+        urlRepository.saveAndFlush(urlEntity);
         int remainingShortUrl = availableShortUrl - 1;
         appUser.setAvailableShortUrl(remainingShortUrl);
         appUserRepository.saveAndFlush(appUser);
+
+
+
         return new GenerationResponse(
                 true,
                 remainingShortUrl, getShortUrlFromShortUrlPath(shortUrlPath),
-                 generationRequest.isPrivate(), true,
-                expireDate);
+                generationRequest.isPrivate(), true,
+                expiresAt.toLocalDate());
     }
 
 
     public ExtensionResponse extendExpiration(String userEmail, ExtensionRequest request) {
-        if (request.number() < 0){
+        if (request.number() < 0) {
             throw new IllegalStateException("Extension request have negative number");
         }
 
         AppUser appUser = getAppUserForUpdate(userEmail);
         int availableShortUrl = appUser.getAvailableShortUrl();
         int remainingNumber = availableShortUrl - request.number();
-        if (remainingNumber < 0){
+        if (remainingNumber < 0) {
             throw new IllegalStateException("Not enough Short URL left");
         }
 
-        final String shortUrlPath;
-        try {
-            shortUrlPath= shortUrlClient.extendExpiration(
-                    new UrlExtensionRequest(
-                            request.longUrl(),
-                            userEmail,
-                            request.isPrivate()
-                    )
-            ).shortUrlPath();
-        } catch (Exception e){
-            throw new IllegalStateException(getErrorMessageFromResponse(e.getMessage()));
-        }
-
-        final ShortUrlPathEntity shortUrlPathEntity = shortUrlPathRepository.
-                findByUserIdAndShortUrlPathAndIsPrivate(appUser.getId(), shortUrlPath, request.isPrivate()).orElseThrow(
-                        () -> new IllegalStateException(
-                                String.format(
-                                        "User %s doesn't have a short url %s with privacy '%s'",
-                                        userEmail, shortUrlPath, request.isPrivate()
-                                )
+        final UrlEntity urlEntity = urlRepository.
+                findByUserIdAndLongUrlAndIsPrivateForUpdate(
+                        appUser.getId(), request.longUrl(), request.isPrivate()
+                ).orElseThrow(() -> new IllegalStateException(
+                                (request.isPrivate() ? "Private" : "Public") + " URL %s does not exist for the user"
                         )
                 );
 
-        final LocalDate prevExpireDate = shortUrlPathEntity.getExpireDate();
-        final LocalDate newExpireDate = prevExpireDate.plusYears(1);
+        final LocalDateTime prevExpiresAt = urlEntity.getExpiresAt();
+        final LocalDateTime newExpiresAt = prevExpiresAt.plusYears(1);
 
         appUser.setAvailableShortUrl(remainingNumber);
-        shortUrlPathEntity.setExpireDate(newExpireDate);
+        urlEntity.setExpiresAt(newExpiresAt);
         appUserRepository.saveAndFlush(appUser);
-        shortUrlPathRepository.saveAndFlush(shortUrlPathEntity);
-
+        urlRepository.saveAndFlush(urlEntity);
         return new ExtensionResponse(true,
-                prevExpireDate, newExpireDate, remainingNumber);
+                prevExpiresAt.format(this.dateTimeFormatter),
+                newExpiresAt.format(this.dateTimeFormatter),
+                remainingNumber, getShortUrlFromShortUrlPath(urlEntity.getShortUrlPath()));
     }
 
     public RefillResponse refill(String userEmail, RefillRequest refillRequest) {
         AppUser appUser = getAppUserForUpdate(userEmail);
         int availableShortUrl = appUser.getAvailableShortUrl();
         int remainingShortUrl = availableShortUrl + refillRequest.number();
-        if (remainingShortUrl > 100000){
+        if (remainingShortUrl > 100000) {
             throw new IllegalStateException("Number of available URLs cannot exceed 100,000");
         }
         appUser.setAvailableShortUrl(remainingShortUrl);
@@ -293,61 +219,40 @@ public class UserService {
     public List<GetUrlsResponse> getUrls(String userEmail, GetUrlsRequest getUrlsRequest) {
         List<GetUrlsResponse> getUrlsResponses = new ArrayList<>();
         AppUser appUser = getAppUser(userEmail);
-        List<ShortUrlPathEntity> shortUrlPathEntities;
-        if (getUrlsRequest.isActive() == 0){
-            shortUrlPathEntities = shortUrlPathRepository.findByUserIdAndIsActiveOrderByCreatedAt(appUser.getId(), false);
-        } else if (getUrlsRequest.isActive() == 1){
-            shortUrlPathEntities = shortUrlPathRepository.findByUserIdAndIsActiveOrderByCreatedAt(appUser.getId(), true);
+        List<UrlEntity> urlEntities;
+        if (getUrlsRequest.isActive() == 0) {
+            urlEntities = urlRepository.findByUserIdAndIsActiveOrderByCreatedAt(appUser.getId(), false);
+        } else if (getUrlsRequest.isActive() == 1) {
+            urlEntities = urlRepository.findByUserIdAndIsActiveOrderByCreatedAt(appUser.getId(), true);
         } else {
-            shortUrlPathEntities = shortUrlPathRepository.findByUserIdOrderByCreatedAt(appUser.getId());
+            urlEntities = urlRepository.findByUserIdOrderByCreatedAt(appUser.getId());
         }
         // Exception: no short urls found
-        if (shortUrlPathEntities.get(0) == null){
+        if (urlEntities.isEmpty() || urlEntities.get(0) == null) {
             return getUrlsResponses;
         }
-        List<ShortUrlPathQuery> shortUrlPathQueries = new ArrayList<>();
-        for (ShortUrlPathEntity shortUrlPathEntity: shortUrlPathEntities) {
-            shortUrlPathQueries.add(
-                    new ShortUrlPathQuery(
-                            shortUrlPathEntity.getShortUrlPath(),
-                            userEmail,
-                            shortUrlPathEntity.getIsPrivate(),
-                            shortUrlPathEntity.getExpireDate()
-                    )
-            );
-        }
-        List<ShortUrlPairItem> shortUrlPairItems;
-        try {
-            shortUrlPairItems= shortUrlClient.getUrls(shortUrlPathQueries);
-        } catch (Exception e){
-            throw new IllegalStateException(getErrorMessageFromResponse(e.getMessage()));
-        }
 
-        if (shortUrlPathEntities.size() != shortUrlPairItems.size()){
-            log.info("Consistency Warning: Number of URLs send does not match the number of URLs received");
-        }
-
-        for (int i=0; i<shortUrlPairItems.size(); i++){
-            ShortUrlPairItem shortUrlPairItem = shortUrlPairItems.get(i);
+        for (int i = 0; i < urlEntities.size(); i++) {
+            UrlEntity urlEntity = urlEntities.get(i);
             getUrlsResponses.add(
                     new GetUrlsResponse(
-                            i+1,
-                            getShortUrlFromShortUrlPath(shortUrlPairItem.shortUrlPath()),
-                            shortUrlPairItem.longURL(),
-                            shortUrlPairItem.text(),
-                            shortUrlPairItem.isPrivate() ? "O" : "X",
-                            shortUrlPairItem.isActive() ? "O" : "X",
-                            shortUrlPairItem.expireDate()
+                            i + 1,
+                            getShortUrlFromShortUrlPath(urlEntity.getShortUrlPath()),
+                            urlEntity.getLongUrl(),
+                            urlEntity.getText(),
+                            urlEntity.getPrivate() ? "O" : "X",
+                            urlEntity.getActive() ? "O" : "X",
+                            urlEntity.getExpiresAt().toLocalDate()
                     )
             );
         }
         return getUrlsResponses;
     }
 
-    public void setUrlIsActive(String userEmail, setUrlIsActiveRequest request) {
+    public void setUrlIsActive(String userEmail, SetUrlIsActiveRequest request) {
         AppUser appUser = getAppUser(userEmail);
         String shortUrlPath = getShortUrlPathFromShortUrl(request.shortUrl());
-        ShortUrlPathEntity shortUrlPathEntity = shortUrlPathRepository.
+        UrlEntity urlEntity = urlRepository.
                 findByUserIdAndShortUrlPathAndIsPrivate(appUser.getId(), shortUrlPath, request.isPrivate()).orElseThrow(
                         () -> new IllegalStateException(
                                 String.format(
@@ -357,58 +262,37 @@ public class UserService {
                         )
                 );
 
-        try {
-            shortUrlClient.setIsActive(
-                    new ModifyIsActiveRequest(
-                            shortUrlPath, userEmail, request.isPrivate(), request.isActive()
-                    )
-            );
-        } catch (Exception e){
-            throw new IllegalStateException(getErrorMessageFromResponse(e.getMessage()));
-        }
-
-        shortUrlPathEntity.setIsActive(request.isActive());
-        shortUrlPathRepository.saveAndFlush(shortUrlPathEntity);
+        urlEntity.setIsActive(request.isActive());
+        urlRepository.saveAndFlush(urlEntity);
     }
 
     public ShortUrlModificationResponse modifyShortUrlPath(String userEmail, ShortUrlModificationRequest request) {
-        if (!request.newShortUrlPath().isEmpty() && request.newShortUrlPath().length() <= 7){
+        final String newShortUrlPath;
+        if (request.newShortUrlPath().isEmpty()) {
+            newShortUrlPath = urlGenerationService.generateShortUrlPath();
+        } else if (request.newShortUrlPath().length() >= 8) {
+            newShortUrlPath = request.newShortUrlPath();
+        } else {
             throw new IllegalStateException("New path is too short (length <= 7)");
         }
-        AppUser appUser = getAppUserForUpdate(userEmail);
-        ModifyPathResponse modifyPathResponse;
-        try {
-            modifyPathResponse = shortUrlClient.modifyPath(
-                new ModifyPathRequest(
-                        request.longUrl(),
-                        request.newShortUrlPath(),
+
+
+        UrlEntity urlEntity = urlRepository
+                .findByUserEmailAndLongUrlAndIsPrivateForUpdate(
                         userEmail,
-                        request.isPrivate(),
-                        request.newDescription()
-                    )
-            );
-        } catch (Exception e){
-            throw new IllegalStateException(getErrorMessageFromResponse(e.getMessage()));
-        }
+                        request.longUrl(),
+                        request.isPrivate()
+                ).orElseThrow(
+                        () -> new IllegalStateException("URL not found")
+                );
 
-        ShortUrlPathEntity shortUrlPathEntity = shortUrlPathRepository
-                .findByUserIdAndShortUrlPathAndIsPrivate(appUser.getId(), modifyPathResponse.prevShortUrlPath(), request.isPrivate())
-                .orElseThrow(() -> new IllegalStateException("Entity not found."));
-
-        appUser.getShortUrlPathEntities().remove(shortUrlPathEntity);
-        appUser.getShortUrlPathEntities().add(
-                new ShortUrlPathEntity(modifyPathResponse.newShortUrlPath(), shortUrlPathEntity.getCreatedAt(),
-                        shortUrlPathEntity.getExpireDate(), shortUrlPathEntity.getIsPrivate(),
-                        shortUrlPathEntity.getIsActive())
-        );
-        appUserRepository.saveAndFlush(appUser);
+        urlEntity.setShortUrlPath(newShortUrlPath);
+        urlRepository.saveAndFlush(urlEntity);
 
         return new ShortUrlModificationResponse(
-                request.longUrl(),
-                getShortUrlFromShortUrlPath(modifyPathResponse.prevShortUrlPath()),
-                getShortUrlFromShortUrlPath(modifyPathResponse.newShortUrlPath()),
-                request.isPrivate(),
-                shortUrlPathEntity.getExpireDate()
+                getShortUrlFromShortUrlPath(urlEntity.getShortUrlPath()),
+                getShortUrlFromShortUrlPath(newShortUrlPath),
+                urlEntity.getExpiresAt()
         );
     }
 
@@ -418,16 +302,66 @@ public class UserService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         return new GetProfileResponse(
                 appUser.getFirstname(), appUser.getLastname(), appUser.getEmail(), appUser.getAvailableShortUrl(),
-                appUser.getAppUserCreatedAt().format(formatter), appUser.getShortUrlPathEntities().size()
+                appUser.getAppUserCreatedAt().format(formatter), appUser.getUrlEntities().size()
         );
     }
 
     public List<ExpireDateResponse> getExpireDate(List<ExpireDateRequest> requests) {
         List<ExpireDateResponse> responses = new ArrayList<>();
-        for (ExpireDateRequest request: requests){
-            Optional<ShortUrlPathEntity> shortUrlPathEntityOptional = shortUrlPathRepository.findByShortUrlPath(request.shortUrlPath());
-            shortUrlPathEntityOptional.ifPresent(shortUrlPathEntity -> responses.add(new ExpireDateResponse(request.shortUrlPath(), shortUrlPathEntity.getExpireDate())));
+        for (ExpireDateRequest request : requests) {
+            Optional<UrlEntity> shortUrlPathEntityOptional = urlRepository.findByShortUrlPath(request.shortUrlPath());
+            shortUrlPathEntityOptional.ifPresent(
+                    urlEntity -> responses.add(new ExpireDateResponse(request.shortUrlPath(), urlEntity.getExpiresAt())));
         }
         return responses;
+    }
+
+    public List<GetUrlsResponse> deleteUrl(String userEmail, DeleteUrlRequest deleteUrlRequest) {
+
+        final String shortUrlPath = getShortUrlPathFromShortUrl(deleteUrlRequest.shortUrlToDelete());
+
+        AppUser appUser = getAppUserForUpdate(userEmail);
+        UrlEntity urlEntity = urlRepository
+                .findByShortUrlPathForUpdate(shortUrlPath
+                ).orElseThrow(
+                        () -> new IllegalStateException(
+                                String.format("Short URL with path %s does not exist.", shortUrlPath)
+                        ));
+
+        appUser.getUrlEntities().remove(urlEntity);
+        urlRepository.delete(urlEntity);
+        appUserRepository.saveAndFlush(appUser);
+
+        return getUrls(userEmail, new GetUrlsRequest(deleteUrlRequest.isActiveForGetUrls()));
+
+    }
+
+
+    public ShortUrlQueryResponse getShortUrl(String longUrl, String userEmail) {
+        ShortUrlQueryResponse shortUrlQueryResponse = new ShortUrlQueryResponse();
+        List<UrlEntity> urlEntities = urlRepository.findByLongUrl(longUrl);
+        for (UrlEntity urlEntity: urlEntities) {
+            shortUrlQueryResponse.set(
+                    urlEntity.getIsPrivate(),
+                    getShortUrlFromShortUrlPath(urlEntity.getShortUrlPath()),
+                    urlEntity.getText(),
+                    urlEntity.getExpiresAt().format(this.dateTimeFormatter),
+                    urlEntity.getActive()
+            );
+        }
+        System.out.println(shortUrlQueryResponse);
+        return shortUrlQueryResponse;
+    }
+
+    @Cacheable(cacheNames = "cache1", key = "'#long'")
+    public UrlEntity getUrlEntityByShortUrlPath(String shortUrlPath, HttpServletRequest request) {
+        UrlEntity urlEntity = urlRepository.findByShortUrlPath(shortUrlPath)
+                .orElseThrow(() -> new IllegalStateException("Short URL not found"));
+        if (urlEntity.getIsPrivate()){
+            if (!urlEntity.getAppUser().getEmail().equals(getUserEmail(request))){
+                throw new IllegalStateException("Short URL not found");
+            }
+        }
+        return urlEntity;
     }
 }

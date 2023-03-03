@@ -30,7 +30,7 @@ export function UserRegistration () {
       firstname: "firstname_"+id,
       lastname: "lastname_"+id,
       username: "username_" + id+ "@email.com",
-      password: "password"
+      password: "password_"
     });
   }
 
@@ -58,7 +58,7 @@ export function UserRegistration () {
       console.log(error)
       error.response.json().then(data => {
         console.log(data);
-        errorNotification("User registration failed", `${data.message}`);
+        errorNotification("User registration failed", error.status === 503 ? error.error : `${data.message}`);
       })
     })
   }

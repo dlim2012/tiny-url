@@ -70,7 +70,7 @@ function App() {
     function RedirectService(props) {
       console.log("Redirecting... " + props.state);
       const payload = { shortUrlPath: props.state}
-      postWithJwt("/api/v1/shorturl/long", payload)
+      postWithJwt("/api/v1/user/urls/long", payload)
         .then(response => response.json())
         .then(data => {
           console.log(data);
@@ -82,18 +82,16 @@ function App() {
           }
         }).catch(
           error => {
-            error.response.json().then(data => {
-              console.log(data)
-              if (localStorage.getItem("jwt") == null){
-                errorNotification("Redirect failed", "URL not found")
-              }
-              else {
-                errorNotification("Redirect failed", "URL not found for the user.");
-              }
+            console.log(error)
+            if (localStorage.getItem("jwt") == null){
+              errorNotification("Redirect failed", "URL not found")
+            }
+            else {
+              errorNotification("Redirect failed", "URL not found for the user.");
+            }
             navigate('/');
-            })}
-        );
-    }
+              })
+            }
 
 
     const {

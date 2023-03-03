@@ -67,9 +67,9 @@ export function UserLogin () {
         <br />
         <br />
         <Form.Item
-          label="Username"
+          label="Email"
           name="username"
-          rules={[{ required: true, message: 'Please input your username!' }]}
+          rules={[{ required: true, message: 'Please input your email!' }]}
         >
           <Input placeholder='Enter your email address'/>
         </Form.Item>

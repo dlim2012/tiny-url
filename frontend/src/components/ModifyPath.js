@@ -24,9 +24,8 @@ export const ModifyPath = () => {
     const [fetching, setFetching] = useState(false);
 
     const onFinish = (values) => {
-        
-        const isPrivate = (values.isPrivate == null ? localStorage.getItem("isPrivate") === "O" : values.isPrivate == false)
         setFetching(true);
+        const isPrivate = (values.isPrivate == null ? localStorage.getItem("isPrivate") === "O" : values.isPrivate)
         const payload = {
           newShortUrlPath: values.newShortUrlPath == null ? "": values.newShortUrlPath,
           longUrl: values.longUrl,
@@ -44,7 +43,7 @@ export const ModifyPath = () => {
             setIsToggled(false)
             error.response.json().then(data => {
               console.log(data)
-              errorNotification("Create new URL failed", `${data.message}`)
+              errorNotification("Create new URL failed", isPrivate ? `Private URL with path ${values.longUrl} not found for the user` : `Public URL with path ${values.longUrl} not found for the user`)
           })
           }).finally (() => {
             setFetching(false);
@@ -95,14 +94,15 @@ export const ModifyPath = () => {
                     pattern: /^[a-zA-Z0-9\-\_]+$/,
                     message: 'Custom path can only include alphanumeric characters, underscore, and dash.'
                   },
-                    {
-                      pattern: /^[a-zA-Z0-9\-\_]{8,1000}$/,
-                        message: "Custom path should be either empty or at least 8 characters"
-                    },
-                    {
-                      pattern: /^[a-zA-Z0-9\-\_]{1,50}$/,
-                        message: "Custom path should have length at most 50"
-                    }
+                  {
+                      pattern: /^.{8,}$/,
+                      // pattern: /{8,}$/,
+                      message: "Custom path should be either empty or at least 8 characters"
+                  },
+                  {
+                    pattern: /^.{1,50}$/,
+                      message: "Custom path should have length at most 50"
+                  }
                   ]}
                 >
               <Input placeholder="Enter a new path (Optional)"/>

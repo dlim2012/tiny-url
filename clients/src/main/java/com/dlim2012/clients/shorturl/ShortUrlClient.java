@@ -38,4 +38,7 @@ public interface ShortUrlClient {
 
     @PostMapping(path="/shorturl/modify-path")
     public ModifyPathResponse modifyPath(@RequestBody ModifyPathRequest modifyPathRequest);
+
+    @PostMapping(path="/shorturl/delete")
+    public void deleteUrl(@RequestBody UrlDeleteRequest urlDeleteRequest);
 }

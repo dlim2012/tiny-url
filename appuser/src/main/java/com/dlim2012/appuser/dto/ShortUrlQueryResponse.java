@@ -1,4 +1,4 @@
-package com.dlim2012.clients.dto;
+package com.dlim2012.appuser.dto;
 
 public class ShortUrlQueryResponse {
     String publicShortUrl = "";

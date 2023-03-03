@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Table, Spin, Empty, Button, Switch, Space, Tag } from 'antd';
+import { Table, Spin, Empty, Button, Switch, Space, Popconfirm } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { UrlDrawerForm } from './UrlDrawerForm'
@@ -13,6 +13,10 @@ export function Url() {
     const [urls, setUrls] = useState([]);
     const [fetching, setFetching] = useState(true);
     const [showDrawer, setShowDrawer] = useState(false);
+
+
+// Issue: antd sort function does not work properly (only one works among ascending and descending)
+// Issue: default switch in table does not reflect the corresponding rows when filtered/sorted
 
 
 const columns = [
@@ -28,7 +32,7 @@ const columns = [
         title: 'Original URL',
         dataIndex: 'longUrl',
         key: 'longUrl',
-        width: "30%",
+        width: "25%",
         },
         {
         title: 'Short URL',
@@ -140,6 +144,40 @@ const columns = [
                 navigate('/pages/user/url-extend')
             }}
             >Extend</Button>
+            <div>
+            <Popconfirm
+                placement="topRight"
+                title={'Are you sure to delete this URL?'}
+                description={'Delete the URL'}
+                onConfirm={() =>{
+                    const payload = {
+                        shortUrlToDelete: record.shortUrl,
+                        isActiveForGetUrls: 2
+                    };
+                    console.log(payload)
+                    postWithJwt("/api/v1/user/urls/delete", payload)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(data)
+                        setUrls(data);
+                        setFetching(false);
+                    }).catch(error => {
+                        error.response.json().then(data => {
+                            console.log(data)
+                            errorNotification("Fetch URLs failed", `${data.message}`)
+                        })
+                    }).finally(() => setFetching(false))
+                }}
+                okText="Yes"
+                cancelText="No"
+            >
+            <Button  
+                    shape="round"  
+                    size="small" 
+                    onClick={() => {
+                }}>
+            Delete</Button></Popconfirm>
+      </div>
             
               </Space>
             ),

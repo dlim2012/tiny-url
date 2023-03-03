@@ -1,6 +1,6 @@
 package com.dlim2012.appuser.dto;
 
-public record setUrlIsActiveRequest(
+public record SetUrlIsActiveRequest(
         String shortUrl,
         Boolean isPrivate,
         Boolean isActive

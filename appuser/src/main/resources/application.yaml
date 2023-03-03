@@ -24,6 +24,17 @@ spring:
         format_sql: true
     database: mysql
     database-platform: org.hibernate.dialect.MySQLDialect
+  cache:
+    type: redis
+    cache-names:
+      - cache1
+      - cache2
+    redis:
+      time-to-live: 600000
+      cache-null-values: true
+  redis:
+    host: localhost
+    port: 6379
   zipkin:
     base-url: http://localhost:9411
 

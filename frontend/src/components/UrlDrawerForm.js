@@ -45,7 +45,11 @@ const choices = [{
     },{
     longUrl: "https://www.wikipedia.com",
     description: "Free encyclopedia"
-    }
+    },
+    // {
+    // longUrl: "https://www.example.com/chart?chs=500x500&chma=0,0,100,100&cht=p&chco=FF0000%2CFFFF00%7CFF8000%2C00FF00%7C00FF00%2C0000FF&chd=t%3A122%2C42%2C17%2C10%2C8%2C7%2C7%2C7%2C7%2C6%2C6%2C6%2C6%2C5%2C5&chl=122%7C42%7C17%7C10%7C8%7C7%7C7%7C7%7C7%7C6%7C6%7C6%7C6%7C5%7C5&chdl=android%7Cjava%7Cstack-trace%7Cbroadcastreceiver%7Candroid-ndk%7Cuser-agent%7Candroid-webview%7Cwebview%7Cbackground%7Cmultithreading%7Candroid-source%7Csms%7Cadb%7Csollections%7Cactivity|Chart",
+    // description: "A long Url Example", 
+    // }
 ];
 
 
@@ -69,7 +73,7 @@ export function UrlDrawerForm({showDrawer, setShowDrawer, fetchUrls}) {
         .then(() => {
                 console.log("URL added");
                 onClose();
-                successNotification("URL added", ``)
+                successNotification("URL added")
                 fetchUrls(2);
             }
             )
@@ -142,12 +146,12 @@ export function UrlDrawerForm({showDrawer, setShowDrawer, fetchUrls}) {
                             message: 'Custom path can only include alphanumeric characters, underscore, and dash.'
                         },
                             {
-                                pattern: /^[a-zA-Z0-9\-\_]{8,50}$/,
+                                pattern: /^.{8,}$/,
                                 // pattern: /{8,}$/,
                                 message: "Custom path should be either empty or at least 8 characters"
                             },
                             {
-                              pattern: /^[a-zA-Z0-9\-\_]{1,50}$/,
+                              pattern: /^.{1,50}$/,
                                 message: "Custom path should have length at most 50"
                             }
                         ]}

@@ -16,8 +16,10 @@ export const About = () => {
       <ReactMarkdown>* Spring Cloud 2022.0.1</ReactMarkdown>
       <ReactMarkdown>* Spring Security</ReactMarkdown>
       <ReactMarkdown>* JSON Web Tokens (JWT) </ReactMarkdown>
-      <ReactMarkdown>* OAuth 2.0 </ReactMarkdown>
+      {/* <ReactMarkdown>* OAuth 2.0 </ReactMarkdown> */}
       <ReactMarkdown>* React 18.2.0 </ReactMarkdown>
+      <ReactMarkdown>* SQL </ReactMarkdown>
+      <ReactMarkdown>* Docker </ReactMarkdown>
       <ReactMarkdown>* Maven </ReactMarkdown>
 
       <ReactMarkdown>## Design</ReactMarkdown>

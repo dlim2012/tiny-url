@@ -10,13 +10,16 @@ services:
     ports:
       - "3306:3306"
     restart: unless-stopped
-  cassandra:
-    container_name: cassandra
-    image: cassandra:4.0
-    ports:
-      - 9042:9042
+  redis:
+    container_name: redis
+    image: redis:6.2-alpine
+#    environment:
+#      - REDIS_PASSWORD: password
     volumes:
-      - cassandra:/data/cassandra
+      - cache:/data
+    ports:
+      - '6379:6379'
+    restart: unless-stopped
   zipkin:
     image: openzipkin/zipkin
     container_name: zipkin
@@ -49,3 +52,5 @@ networks:
 volumes:
   mysql:
   cassandra:
+  cache:
+    driver: local

@@ -85,12 +85,12 @@ public class AuthenticationService {
   }
 
   public boolean isValidEmail(String email){
-    if (email.length() < 7) {
+    if (email.length() < 8) {
       throw new IllegalStateException(
-              String.format("Email {} is too short with length {}", email, email.length()));
+              String.format("Email %s is too short (minimum length 8)", email));
     }
     if (!Pattern.compile("^(.+)@(.+)$").matcher(email).matches()){
-      throw new IllegalStateException(String.format("Email {} is not valid.", email));
+      throw new IllegalStateException(String.format("%s is not a valid email address", email));
     }
     return true;
   }

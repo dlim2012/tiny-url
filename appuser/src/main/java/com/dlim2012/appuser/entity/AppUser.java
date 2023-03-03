@@ -1,10 +1,7 @@
 package com.dlim2012.appuser.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,10 +12,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-@Data
+//@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Getter
+@Setter
 @Entity
 @Table(name = "app_user")
 public class AppUser implements UserDetails {
@@ -40,12 +39,17 @@ public class AppUser implements UserDetails {
   @Column(name = "app_user_created_at", nullable=false)
   private LocalDateTime appUserCreatedAt;
 
-  @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-  @JoinColumn(name = "user_id", referencedColumnName = "id")
-  private Set<ShortUrlPathEntity> shortUrlPathEntities = new HashSet<>();
 
-  public Set<ShortUrlPathEntity> getShortUrlPathEntities() {
-    return shortUrlPathEntities;
+//  @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+//  @JoinColumn(name = "user_id", referencedColumnName = "id")
+//  private Set<UrlEntity> urlEntities = new HashSet<>();
+
+  @OneToMany(fetch = FetchType.LAZY, mappedBy="appUser")
+//  @JoinColumn(name = "user_id")
+  private Set<UrlEntity> urlEntities = new HashSet<>();
+
+  public Set<UrlEntity> getUrlEntities() {
+    return urlEntities;
   }
 
   public int getAvailableShortUrl() {
