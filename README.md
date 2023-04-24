@@ -1,5 +1,5 @@
 # Tiny-URL System
-A personal project made to practice system design. ([Website](http://76.23.247.67))
+A microservices-based system that allows users to use short URLs to go to desired websites. ([Website](http://76.23.247.67))
 
 ## Features
 * Short URL generation and redirection service
